@@ -1,19 +1,33 @@
 import { StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
-import EditScreenInfo from "@/components/EditScreenInfo";
 import { Text, View } from "@/components/Themed";
 
-export default function TabOneScreen() {
+export default function Scanner() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
+      <Text style={styles.title}>Scan up to two images (camera or upload)</Text>
       <View
         style={styles.separator}
         lightColor="#eee"
         darkColor="rgba(255,255,255,0.1)"
       />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
+
+    <View style={styles.imagesContainer}>
+      <View style={styles.imageContainer}>
+        <View style={styles.imageIconContainer}>
+          <Feather name="camera" size={30} color="black" />
+          <Feather name="upload" size={30} color="black" />
+        </View>
+      </View>
+      <View style={styles.imageContainer}>
+        <View style={styles.imageIconContainer}>
+          <Feather name="camera" size={30} color="black" />
+          <Feather name="upload" size={30} color="black" />
+        </View>
+      </View>
     </View>
+  </View>
   );
 }
 
@@ -32,109 +46,123 @@ const styles = StyleSheet.create({
     height: 1,
     width: "80%",
   },
-});
-
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  Image,
-  StyleSheet,
-  Picker,
-} from "react-native";
-
-const App: React.FC = () => {
-  const [account, setAccount] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.topBar}>{/* Icons for menu and inbox */}</View>
-      <Text style={styles.instructions}>
-        Sign and write "for deposit only at Merrill" on the back of your check.
-      </Text>
-      <View style={styles.checkImages}>
-        <Image
-          source={{ uri: "path-to-front-check-image" }}
-          style={styles.checkImage}
-        />
-        <Text>Front of Check</Text>
-        <Image
-          source={{ uri: "path-to-back-check-image" }}
-          style={styles.checkImage}
-        />
-        <Text>Back of Check</Text>
-      </View>
-      <Text style={styles.label}>Deposit to</Text>
-      <Picker
-        selectedValue={account}
-        onValueChange={(itemValue) => setAccount(itemValue)}
-        style={styles.picker}
-      >
-        {/* Picker items for account selection */}
-      </Picker>
-      <TextInput
-        placeholder="$0.00"
-        value={amount}
-        onChangeText={(text) => setAmount(text)}
-        keyboardType="numeric"
-        style={styles.input}
-      />
-      <View style={styles.buttonContainer}>
-        <Button title="Cancel" onPress={() => {}} />
-        <Button title="Next" onPress={() => {}} />
-      </View>
-      <Text style={styles.disclosure}>
-        Investing involves risk. There is always the potential of losing money
-        when you invest in securities.
-      </Text>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  topBar: {
+  imagesContainer: {
+    width: "80%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // Add styles for top bar
   },
-  instructions: {
-    // Add styles for instructions text
-  },
-  checkImages: {
+  imageContainer: {
+    borderWidth: 1,
+    borderColor: "black",
     flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    // Add styles for check images container
+    aspectRatio: 1,
+    //alignItems: "center",
+   justifyContent: "center",
+    // width: "80%",
   },
-  checkImage: {
-    // Add styles for check images
-  },
-  label: {
-    // Add styles for labels
-  },
-  picker: {
-    // Add styles for picker
-  },
-  input: {
-    borderBottomWidth: 1,
-    // Add styles for input field
-  },
-  buttonContainer: {
+  imageIconContainer: {
     flexDirection: "row",
+    margin: 25,
     justifyContent: "space-between",
-    // Add styles for button container
-  },
-  disclosure: {
-    // Add styles for disclosure text
+    width: "30%",
   },
 });
 
-export default App;
+// import React, { useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   Button,
+//   Image,
+//   StyleSheet,
+//   Picker,
+// } from "react-native";
+
+// const App: React.FC = () => {
+//   const [account, setAccount] = useState<string>("");
+//   const [amount, setAmount] = useState<string>("");
+
+//   return (
+//     <View style={styles.container}>
+
+//       <View style={styles.checkImages}>
+//         <Image
+//           source={{ uri: "path-to-front-check-image" }}
+//           style={styles.checkImage}
+//         />
+//         <Text>Front of Check</Text>
+//         <Image
+//           source={{ uri: "path-to-back-check-image" }}
+//           style={styles.checkImage}
+//         />
+//         <Text>Back of Check</Text>
+//       </View>
+
+//       <Text style={styles.label}>Deposit to</Text>
+//       <Picker
+//         selectedValue={account}
+//         onValueChange={(itemValue) => setAccount(itemValue)}
+//         style={styles.picker}
+//       >
+//         {/* Picker items for account selection */}
+//       </Picker>
+//       <TextInput
+//         placeholder="$0.00"
+//         value={amount}
+//         onChangeText={(text) => setAmount(text)}
+//         keyboardType="numeric"
+//         style={styles.input}
+//       />
+//       <View style={styles.buttonContainer}>
+//         <Button title="Cancel" onPress={() => {}} />
+//         <Button title="Next" onPress={() => {}} />
+//       </View>
+//       <Text style={styles.disclosure}>
+//         Investing involves risk. There is always the potential of losing money
+//         when you invest in securities.
+//       </Text>
+//     </View>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     padding: 20,
+//   },
+//   topBar: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     // Add styles for top bar
+//   },
+//   instructions: {
+//     // Add styles for instructions text
+//   },
+
+//   checkImage: {
+//     // Add styles for check images
+//   },
+//   label: {
+//     // Add styles for labels
+//   },
+//   picker: {
+//     // Add styles for picker
+//   },
+//   input: {
+//     borderBottomWidth: 1,
+//     // Add styles for input field
+//   },
+//   buttonContainer: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     // Add styles for button container
+//   },
+//   disclosure: {
+//     // Add styles for disclosure text
+//   },
+// });
+
+// export default App;
