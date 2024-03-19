@@ -1,53 +1,51 @@
-import { StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { StyleSheet, View } from "react-native";
+import { Divider, Text, Icon } from "react-native-paper";
 
-import { Text, View } from "@/components/Themed";
+//import { Icon } from "@expo/vector-icons";
+
+//import { Text, View } from "@/components/Themed";
 
 export default function Scanner() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Scan up to two images (camera or upload)</Text>
-      <View
-        style={styles.separator}
-        lightColor="#eee"
-        darkColor="rgba(255,255,255,0.1)"
-      />
-
-    <View style={styles.imagesContainer}>
-      <View style={styles.imageContainer}>
-        <View style={styles.imageIconContainer}>
-          <Feather name="camera" size={30} color="black" />
-          <Feather name="upload" size={30} color="black" />
+      <Text variant="bodyMedium">Scan up to two images</Text>
+      <Divider />
+      <View style={styles.imagesContainer}>
+        <View style={styles.imageContainer}>
+          <View style={styles.imageIconContainer}>
+            <Icon source="camera" size={30} color="black" />
+            <Icon source="upload" size={30} color="black" />
+          </View>
         </View>
-      </View>
-      <View style={styles.imageContainer}>
-        <View style={styles.imageIconContainer}>
-          <Feather name="camera" size={30} color="black" />
-          <Feather name="upload" size={30} color="black" />
+        <View style={styles.imageContainer}>
+          <View style={styles.imageIconContainer}>
+            <Icon source="camera" size={30} color="black" />
+            <Icon source="upload" size={30} color="black" />
+          </View>
         </View>
       </View>
     </View>
-  </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    width: "80%",
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: "80%",
-  },
+  // title: {
+  //   fontSize: 20,
+  //   fontWeight: "bold",
+  // },
+  // separator: {
+  //   marginVertical: 30,
+  //   height: 1,
+  //   width: "80%",
+  // },
   imagesContainer: {
-    width: "80%",
+    //width: "80%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -58,7 +56,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     aspectRatio: 1,
     //alignItems: "center",
-   justifyContent: "center",
+    justifyContent: "center",
     // width: "80%",
   },
   imageIconContainer: {
