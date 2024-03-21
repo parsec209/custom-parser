@@ -9,7 +9,7 @@ export default function Scanner() {
   return (
     <View style={styles.container}>
       <Text variant="bodyMedium">Scan up to two images</Text>
-      <Divider />
+      <Divider bold style={styles.divider} />
       <View style={styles.imagesContainer}>
         <View style={styles.imageContainer}>
           <View style={styles.imageIconContainer}>
@@ -30,7 +30,7 @@ export default function Scanner() {
 
 const styles = StyleSheet.create({
   container: {
-    width: "80%",
+    //width: "80%",
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -44,6 +44,11 @@ const styles = StyleSheet.create({
   //   height: 1,
   //   width: "80%",
   // },
+  divider: {
+    marginVertical: 30,
+    height: 1,
+    width: "80%",
+  },
   imagesContainer: {
     //width: "80%",
     flexDirection: "row",

@@ -35,7 +35,7 @@ export default function TabLayout() {
           title: "Scanner",
           //tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
           tabBarIcon: ({ color }) => (
-            <Icon source="code" color={color} size={20} />
+            <Icon source="scan-helper" color={color} size={20} />
           ),
 
           // headerRight: () => (
@@ -60,7 +60,7 @@ export default function TabLayout() {
           title: "Tables",
           //tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
           tabBarIcon: ({ color }) => (
-            <Icon source="code" color={color} size={20} />
+            <Icon source="table" color={color} size={20} />
           ),
         }}
       />
