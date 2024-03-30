@@ -30,7 +30,7 @@ export default function Scanner() {
 
 const styles = StyleSheet.create({
   container: {
-    //width: "80%",
+    // width: "80%",
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -52,23 +52,23 @@ const styles = StyleSheet.create({
   imagesContainer: {
     //width: "80%",
     flexDirection: "row",
-    justifyContent: "space-between",
+    // justifyContent: "space-around",
     alignItems: "center",
   },
   imageContainer: {
     borderWidth: 1,
     borderColor: "black",
-    flexDirection: "row",
+    // flexDirection: "row",
     aspectRatio: 1,
-    //alignItems: "center",
+    alignItems: "center",
     justifyContent: "center",
     // width: "80%",
   },
   imageIconContainer: {
     flexDirection: "row",
-    margin: 25,
+    margin: 40,
     justifyContent: "space-between",
-    width: "30%",
+    // width: "30%",
   },
 });
 
