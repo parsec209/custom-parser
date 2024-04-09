@@ -5,8 +5,13 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { PaperProvider } from "react-native-paper";
+import * as SQLite from "expo-sqlite";
+
 
 //import { useColorScheme } from '@/components/useColorScheme';
+
+export const db = SQLite.openDatabase("db.db");
+ 
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -38,24 +43,28 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        "create table if not exists parsers (id integer primary key not null, name text unique, fields text, prompts text);");
+      });
+    }, []);
+
   if (!loaded) {
     return null;
   }
-
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  //const colorScheme = useColorScheme();
 
   return (
     // <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
     <PaperProvider>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+        <Stack.Screen name="parsers" options={{ presentation: "modal", title: "Parser selection" }} />
+        <Stack.Screen name="parser" options={{ presentation: "modal", title: "Parser setup" }} />
       </Stack>
       {/* </ThemeProvider> */}
     </PaperProvider>
   );
 }
+
+
