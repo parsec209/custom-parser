@@ -13,13 +13,29 @@ export default function ParserSelectionModal() {
   const [parsers, setParsers] = useState([]); // [ { id, name }]
   const [checked, setChecked] = useState(parsers.length ? parsers[0]['name'] : null);
 
+
+
+
+  const deleteAll = async () => {
+    try {
+      await db.transactionAsync(async (tx) => {
+        const { rows: { _array } } = await tx.executeSqlAsync(`delete from parsers;`, []);
+        console.log("DELETED ALL: " + JSON.stringify(_array));
+      });
+    } catch (err) {
+      alert(err);
+      console.log(err);
+    }
+  };
+
+
   useEffect(() => {
     db.transaction((tx) => {
       tx.executeSql(
             "select name, id from parsers order by name asc;",
             [],
             (_, { rows: { _array } }) => {
-              console.log("NAME AND ID FIELDS: " + _array);
+              console.log("GET ALL, JUST NAME AND ID FIELDS: " + JSON.stringify(_array));
               setParsers(_array)
           });
         });
@@ -63,6 +79,19 @@ export default function ParserSelectionModal() {
       >
         Start scan
       </Button>
+
+      
+      <Button
+        mode="contained"
+        buttonColor="blue"
+        onPress={deleteAll}
+        disabled={!parsers.length}
+      >
+        Delete All
+      </Button>
+
+
+
     </View>
   );
 }
