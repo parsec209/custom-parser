@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { useRoute } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  Platform,
   KeyboardAvoidingView,
   StyleSheet,
   View,
@@ -12,8 +9,8 @@ import {
 } from "react-native";
 import {
   Text,
-  Button,
   DataTable,
+  Button,
   Portal,
   Modal,
   TextInput,
@@ -25,13 +22,11 @@ export default function ParserSetupModal() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
-  const [titles, setTitles] = useState([""]); 
+  const [fieldNameModalIndex, setFieldNameModalIndex] = useState(null); //string or null
+  const [cellModalIndex, setCellModalIndex] = useState(null); //{ rowIndex, cellIndex } || null
+  const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([[""]]);
-  const [selectedFieldDetails, setSelectedFieldDetails] = useState({}); // {type, text, index} type = title || row
-  //const [fieldIndex, setFieldIndex] = useState(0);
-  //const [fieldType, setFieldType] = useState("title"); //title || row
-  //const [fieldText, setFieldText] = useState("");
+  //const [selectedFieldDetails, setSelectedFieldDetails] = useState({}); // {type, text, index} type = title || row
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
   const [itemsPerPage, onItemsPerPageChange] = useState(
@@ -41,13 +36,7 @@ export default function ParserSetupModal() {
   const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // const getEmptyStringIndices = (array) => {
-  //   const indices = array.reduce(
-  //     (acc, el, i) => (el === "" ? acc.concat(i) : acc),
-  //     [],
-  //   );
-  //   return indices;
-  // };
+  const [modalText, setModalText] = useState("");
 
   // const delayedFunction = () => {
   //   setTimeout(() => {
@@ -58,24 +47,30 @@ export default function ParserSetupModal() {
   // };
 
   const setValidity = () => {
-    if (name && !titles.includes("") && !rows[0].includes("")) {
+    if (name && !fieldNames.includes("") && !rows[0].includes("")) {
       setIsValid(true);
     }
   };
 
+
+
+
+
+
   const dbPost = async () => {
     try {
       await db.transactionAsync(async (tx) => {
-        const stringifiedTitles = JSON.stringify(titles);
+        const stringifiedFieldNames = JSON.stringify(fieldNames);
         const stringifiedRow = JSON.stringify(rows[0]);
-        const {
-          rows: { _array },
-        } = await tx.executeSqlAsync(
+        const result  = await tx.executeSqlAsync(
           "insert into parsers (name, fields, prompts) values (?, ?, ?)",
-          [name, stringifiedTitles, stringifiedRow],
+          [name, stringifiedFieldNames, stringifiedRow],
         );
-        console.log("POSTED: " + _array);
+        console.log("POSTED: " + JSON.stringify(result));
       });
+      await db.transactionAsync(async (tx) => {
+        const result  = await tx.executeSqlAsync(
+          "create table if not exists ? (id integer primary key not null, name text unique, fields text, prompts text);"
       router.replace("./parsers");
     } catch (err) {
       alert(err);
@@ -86,15 +81,13 @@ export default function ParserSetupModal() {
   const dbEdit = async () => {
     try {
       await db.transactionAsync(async (tx) => {
-        const stringifiedTitles = JSON.stringify(titles);
+        const stringifiedFieldNames = JSON.stringify(fieldNames);
         const stringifiedRow = JSON.stringify(rows[0]);
-        const {
-          rows: { _array },
-        } = await tx.executeSqlAsync(
+        const result = await tx.executeSqlAsync(
           `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
-          [name, stringifiedTitles, stringifiedRow, id],
+          [name, stringifiedFieldNames, stringifiedRow, id],
         );
-        console.log("UPDATED: " + _array);
+        console.log("UPDATED: " + JSON.stringify(result));
       });
       router.replace("./parsers");
     } catch (err) {
@@ -106,10 +99,8 @@ export default function ParserSetupModal() {
   const dbDelete = async () => {
     try {
       await db.transactionAsync(async (tx) => {
-        const {
-          rows: { _array },
-        } = await tx.executeSqlAsync(`delete from parsers where id = ?;`, [id]);
-        console.log("DELETED ONE: " + _array);
+        const result = await tx.executeSqlAsync(`delete from parsers where id = ?;`, [id]);
+        console.log("DELETED ONE: " + JSON.stringify(result));
       });
       router.replace("./parsers");
     } catch (err) {
@@ -128,45 +119,34 @@ export default function ParserSetupModal() {
       { text: "OK", onPress: dbDelete },
     ]);
 
-  const showModal = (fieldType, fieldIndex, fieldText) => {
-    setSelectedFieldDetails({
-      fieldType,
-      fieldIndex,
-      fieldText,
-    });
-    setIsVisible(true);
+  const updateFieldNameText = (fieldNameIndex, text) => {
+    const updatedFieldNames = [...fieldNames];
+    updatedFieldNames[fieldNameIndex] = text;
+    setFieldNames(updatedFieldNames);
   };
 
-  const hideModal = () => {
-    setIsVisible(false);
-    if (selectedFieldDetails.fieldType === "title") {
-      const updatedTitles = [...titles];
-      updatedTitles[selectedFieldDetails.fieldIndex] =
-        selectedFieldDetails.fieldText;
-      setTitles(updatedTitles);
-    } else {
-      const updatedRows = [...rows];
-      updatedRows[0][selectedFieldDetails.fieldIndex] =
-        selectedFieldDetails.fieldText;
-      setRows(updatedRows);
-    }
+  const updatePromptText = (rowIndex, cellIndex, text) => {
+    const updatedRows = rows.map((row) => [...row]);
+    updatedRows[rowIndex][cellIndex] = text;
+    setRows(updatedRows);
   };
 
   const from = page * itemsPerPage;
   const to = Math.min((page + 1) * itemsPerPage, rows.length);
 
   const addColumn = () => {
-    const updatedTitles = [...titles, ""];
+    const updatedFieldNames = [...fieldNames, ""];
     const updatedRows = rows.map((row) => {
       return [...row, ""];
     });
-    setTitles(updatedTitles);
+    setFieldNames(updatedFieldNames);
     setRows(updatedRows);
   };
 
   const resetFields = () => {
-    setTitles([""]);
+    setFieldNames([""]);
     setRows([[""]]);
+    setPage(0);
   };
 
   const addRow = () => {
@@ -180,19 +160,29 @@ export default function ParserSetupModal() {
     setRows(updatedRows);
   };
 
-  const deleteColumn = () => {
-    let updatedTitles = [...titles];
+
+  const deleteRow = () => {
     let updatedRows = rows.map((row) => {
       const updatedRow = [...row];
       updatedRow.pop();
       return updatedRow;
     });
-    updatedTitles.pop();
-    if (!updatedTitles.length) {
-      updatedTitles.push("");
+    setRows(updatedRows);
+  };
+
+  const deleteColumn = () => {
+    let updatedFieldNames = [...fieldNames];
+    let updatedRows = rows.map((row) => {
+      const updatedRow = [...row];
+      updatedRow.pop();
+      return updatedRow;
+    });
+    updatedFieldNames.pop();
+    if (!updatedFieldNames.length) {
+      updatedFieldNames.push("");
       updatedRows = [[""]];
     }
-    setTitles(updatedTitles);
+    setFieldNames(updatedFieldNames);
     setRows(updatedRows);
   };
 
@@ -208,13 +198,47 @@ export default function ParserSetupModal() {
           [id],
           (_, { rows: { _array } }) => {
             // setName(parserName)
-            console.log("GET ONE: " + _array);
-            //see what data looks like before setting states
+            console.log("GET ONE: " + JSON.stringify(_array));
+            const parsedFields = JSON.parse(_array[0].fields)
+            const parsedPrompts = JSON.parse(_array[0].prompts)
+            setName(_array[0].name)
+            setFieldNames(parsedFields);
+            setRows([parsedPrompts])
           },
+          (_, err) => {
+            alert(err);
+            console.log(err);
+            return true
+          }
         );
       });
     }
   }, []);
+
+
+
+  // const dbGet = async () => {
+  //   try {
+  //     await db.transaction((tx) => {
+  //       tx.executeSql(
+  //         "select  * from parsers where id = ?",
+  //         [id],
+  //         (_, { rows: { _array } }) => {
+  //           console.log(
+  //             "GET ONE: " + JSON.stringify(_array),
+  //           );
+  //           setFieldNames(_array[0].fields);
+  //           setRows([_array[0].prompts])
+  //         },
+  //       );
+  //     });;
+  //     router.replace("./parsers");
+  //   } catch (err) {
+  //     alert(err);
+  //     console.log(err);
+  //   }
+  // };
+
 
   return (
     // <View style={styles.container}>
@@ -257,6 +281,9 @@ export default function ParserSetupModal() {
         <Button icon="plus" mode="text" onPress={addRow} disabled={isLoading}>
           Add row
         </Button>
+        <Button icon="minus" mode="text" onPress={deleteRow} disabled={isLoading}>
+          Delete row
+        </Button>
         <Button
           icon="refresh"
           mode="text"
@@ -268,15 +295,15 @@ export default function ParserSetupModal() {
       </View>
       <View style={styles.tableTitleContainer}>
         <Text variant="titleMedium">Parser table</Text>
-        {isValidated && (titles.includes("") || rows[0].includes("")) && (
+        {isValidated && (fieldNames.includes("") || rows[0].includes("")) && (
           <Text variant="bodySmall" style={styles.invalidField}>
             Please fill out any red-highlighted table fields.
           </Text>
         )}
       </View>
       <View>
-        <ScrollView horizontal={true} contentContainerStyle={styles.scrollView}>
-          <Portal>
+        <ScrollView horizontal contentContainerStyle={styles.scrollView}>
+          {/* <Portal>
             <Modal
               visible={isVisible}
               onDismiss={hideModal}
@@ -298,61 +325,100 @@ export default function ParserSetupModal() {
                 }
               />
             </Modal>
-          </Portal>
+          </Portal> */}
 
-          <DataTable style={styles.table}>
-            <DataTable.Header>
-              {titles.map((title, i) => (
-                <DataTable.Title
-                  key={i}
-                  
-                  // sortDirection="ascending"
-                  // style={styles.tableField}
-                  style={{width: 30}}
-                  textStyle={{
-                    textDecorationLine: "underline",
-                    color:
-                      (!isValidated) || (isValidated && title)
-                        ? "blue"
-                        : "red",
-                  }}
-                  onPress={() => !isLoading && showModal("title", i, title)}
-                >
-                  {title
-                    ? title.length > 15
-                      ? title.substring(0, 15) + "..."
-                      : title
-                    : "Field name"}
-                </DataTable.Title>
-              ))}
-            </DataTable.Header>
-            {rows.slice(from, to).map((row, i) => (
-              <DataTable.Row key={i}>
-                {row.map((prompt, j) => (
-                  <DataTable.Cell
-                    key={j}
-                  
-                    // style={styles.tableField}
-                    style={{width: 30}}
-                    textStyle={{
+          <View style={styles.table}>
+            <View style={styles.row}>
+              {fieldNames && fieldNames.map((fieldName, fieldNameIndex) => (
+                <View key={fieldNameIndex} style={styles.cell}>
+                  <Button
+                    mode="text"
+                    disabled={isLoading}
+                    onPress={() => { setFieldNameModalIndex(fieldNameIndex); setModalText(fieldName)}}
+                    labelStyle={{
                       textDecorationLine: "underline",
                       color:
-                        (!isValidated) || (isValidated && prompt)
-                          ? "blue"
-                          : "red",
+                        !isValidated || (isValidated && fieldName) ? "blue" : "red",
                     }}
-                    onPress={() => !isLoading && showModal("row", j, prompt)}
                   >
-                    {prompt
-                      ? prompt.length > 15
-                        ? prompt.substring(0, 15) + "..."
-                        : prompt
-                      : "Value prompt"}
-                  </DataTable.Cell>
+                    {fieldName
+                      ? fieldName.length > 20
+                        ? fieldName.substring(0, 20) + "..."
+                        : fieldName
+                      : "Field name"}
+                  </Button>
+                  <Portal>
+                    <Modal
+                      visible={fieldNameModalIndex === fieldNameIndex}
+                      onDismiss={() => {
+                        setFieldNameModalIndex(null);
+                        updateFieldNameText(fieldNameIndex, modalText);
+                      }}
+                      contentContainerStyle={styles.modal}
+                    >
+                      <TextInput
+                        label={"Field name"}
+                        value={modalText}
+                        onChangeText={(text) => {
+                          setModalText(text);
+                        }}
+                      />
+                    </Modal>
+                  </Portal>
+                </View>
+              ))}
+            </View>
+
+            {rows.slice(from, to).map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.row}>
+                {row.map((prompt, cellIndex) => (
+                  <View key={cellIndex} style={styles.cell}>
+                    <Button
+                      mode="text"
+                      disabled={isLoading}
+                      onPress={() => {
+                        setCellModalIndex({ rowIndex, cellIndex });
+                        setModalText(prompt);
+                      }}
+                      labelStyle={{
+                        textDecorationLine: "underline",
+                        color:
+                          !isValidated || (isValidated && prompt)
+                            ? "blue"
+                            : "red",
+                      }}
+                    >
+                      {prompt
+                        ? prompt.length > 20
+                          ? prompt.substring(0, 20) + "..."
+                          : prompt
+                        : "Field value prompt"}
+                    </Button>
+                    <Portal>
+                      <Modal
+                        visible={
+                          cellModalIndex !== null &&
+                          cellModalIndex.rowIndex === rowIndex &&
+                          cellModalIndex.cellIndex === cellIndex
+                        }
+                        onDismiss={() => {
+                          setCellModalIndex(null);
+                          updatePromptText(rowIndex, cellIndex, modalText);
+                        }}
+                        contentContainerStyle={styles.modal}
+                      >
+                        <TextInput
+                          label={"Field value prompt"}
+                          value={modalText}
+                          onChangeText={(text) => setModalText(text)}
+                        />
+                      </Modal>
+                    </Portal>
+                  </View>
                 ))}
-              </DataTable.Row>
+              </View>
             ))}
-          </DataTable>
+          </View>
         </ScrollView>
 
         <DataTable.Pagination
@@ -388,7 +454,8 @@ export default function ParserSetupModal() {
       </View>
       {id && (
         <Button
-          mode="outlined"
+          mode="contained"
+          buttonColor="blue"
           onPress={createTwoButtonAlert}
           disabled={isLoading}
         >
@@ -405,6 +472,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
+    //paddingLeft: 16,
+    //paddingRight: 16,
   },
   nameContainer: {
     alignItems: "center",
@@ -416,14 +485,23 @@ const styles = StyleSheet.create({
   tableButtonContainer: {
     alignItems: "flex-start",
     marginBottom: 10,
+    marginLeft: 16
   },
   scrollView: {
     flexGrow: 1,
-    justifyContent: "center",
+    marginBottom: 10,
+    paddingHorizontal: 16
+    //width: 300,
+    // justifyContent: "center",
+  },
+  scrollViewContainer: {
+    
+    //width: 300,
   },
   modal: {
     backgroundColor: "white",
     padding: 20,
+    marginHorizontal: 16
   },
   tableTitleContainer: {
     alignItems: "center",
@@ -434,16 +512,28 @@ const styles = StyleSheet.create({
   },
   table: {
     backgroundColor: "white",
-    borderBottomWidth: 1,
     borderTopWidth: 1,
+    borderLeftWidth: 1,
     borderColor: "grey",
   },
-  // tableField: {
-  //   paddingHorizontal: 8,
-  // },
+  row: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderColor: "grey",
+  },
+  cell: {
+    flex: 1,
+    // padding: 8,
+    width: 175,
+    borderRightWidth: 1,
+    borderColor: "grey",
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
   pagination: {
     backgroundColor: "white",
     marginBottom: 20,
+    marginHorizontal: 16
   },
   saveButtonContainer: {
     alignItems: "center",

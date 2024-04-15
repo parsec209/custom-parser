@@ -3,24 +3,21 @@ import { StatusBar } from "expo-status-bar";
 import { Platform, StyleSheet, View } from "react-native";
 import { Text, RadioButton, Button } from "react-native-paper";
 import { Link } from "expo-router";
-import { db } from './_layout';
-
+import { db } from "./_layout";
 
 //import EditScreenInfo from '@/components/EditScreenInfo';
 //import { Text, View } from '@/components/Themed';
 
 export default function ParserSelectionModal() {
   const [parsers, setParsers] = useState([]); // [ { id, name }]
-  const [checked, setChecked] = useState(parsers.length ? parsers[0]['name'] : null);
-
-
-
+  const [checked, setChecked] = useState(null);
 
   const deleteAll = async () => {
     try {
       await db.transactionAsync(async (tx) => {
-        const { rows: { _array } } = await tx.executeSqlAsync(`delete from parsers;`, []);
-        console.log("DELETED ALL: " + JSON.stringify(_array));
+        const result = await tx.executeSqlAsync(`delete from parsers;`, []);
+        setParsers([]);
+        console.log("DELETED ALL: " + JSON.stringify(result));
       });
     } catch (err) {
       alert(err);
@@ -28,33 +25,44 @@ export default function ParserSelectionModal() {
     }
   };
 
-
   useEffect(() => {
     db.transaction((tx) => {
       tx.executeSql(
-            "select name, id from parsers order by name asc;",
-            [],
-            (_, { rows: { _array } }) => {
-              console.log("GET ALL, JUST NAME AND ID FIELDS: " + JSON.stringify(_array));
-              setParsers(_array)
-          });
-        });
-      }, []);
+        "select name, id from parsers order by name asc;",
+        [],
+        (_, { rows: { _array } }) => {
+          console.log(
+            "GET ALL, JUST NAME AND ID FIELDS: " + JSON.stringify(_array),
+          );
+          setParsers(_array);
+          setChecked(_array.length ? _array[0].name : null);
+        },
+        (_, err) => {
+          alert(err);
+          console.log(err);
+          return true;
+        },
+      );
+    });
+  }, []);
 
-      
-
-  const parserSelections = parsers.map((parser) => (
-    <View style={styles.parserSelection} key={parser.id}>
+  const parserSelections = parsers.map(({ id, name }) => (
+    <View style={styles.parserSelection} key={id}>
       <RadioButton
-        value={parser.name}
-        status={checked === parser.name ? "checked" : "unchecked"}
-        onPress={() => setChecked(parser.name)}
+        value={name}
+        status={checked === name ? "checked" : "unchecked"}
+        onPress={() => setChecked(name)}
       />
-      <Link
-        href={`./parser?id=${parser.id}`}
+      <Button
+        mode="text"
+        onPress={() => {}}
+        labelStyle={{
+          textDecorationLine: "underline",
+          color: "blue",
+        }}
       >
-        {parser.name}
-      </Link>
+        <Link href={`./parser?id=${id}`}>{name}</Link>
+      </Button>
     </View>
   ));
 
@@ -80,7 +88,6 @@ export default function ParserSelectionModal() {
         Start scan
       </Button>
 
-      
       <Button
         mode="contained"
         buttonColor="blue"
@@ -89,9 +96,6 @@ export default function ParserSelectionModal() {
       >
         Delete All
       </Button>
-
-
-
     </View>
   );
 }
