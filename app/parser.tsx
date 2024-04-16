@@ -26,7 +26,6 @@ export default function ParserSetupModal() {
   const [cellModalIndex, setCellModalIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([[""]]);
-  //const [selectedFieldDetails, setSelectedFieldDetails] = useState({}); // {type, text, index} type = title || row
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
   const [itemsPerPage, onItemsPerPageChange] = useState(
@@ -35,7 +34,6 @@ export default function ParserSetupModal() {
   const [isValidated, setIsValidated] = useState(false);
   const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
   const [modalText, setModalText] = useState("");
 
   // const delayedFunction = () => {
@@ -52,29 +50,21 @@ export default function ParserSetupModal() {
     }
   };
 
-
-
-
-
-
   const dbPost = async () => {
     try {
       await db.transactionAsync(async (tx) => {
         const stringifiedFieldNames = JSON.stringify(fieldNames);
         const stringifiedRow = JSON.stringify(rows[0]);
-        const result  = await tx.executeSqlAsync(
+        const result = await tx.executeSqlAsync(
           "insert into parsers (name, fields, prompts) values (?, ?, ?)",
           [name, stringifiedFieldNames, stringifiedRow],
         );
         console.log("POSTED: " + JSON.stringify(result));
       });
-      await db.transactionAsync(async (tx) => {
-        const result  = await tx.executeSqlAsync(
-          "create table if not exists ? (id integer primary key not null, name text unique, fields text, prompts text);"
       router.replace("./parsers");
     } catch (err) {
       alert(err);
-      console.log(err);
+      console.error(err);
     }
   };
 
@@ -92,32 +82,39 @@ export default function ParserSetupModal() {
       router.replace("./parsers");
     } catch (err) {
       alert(err);
-      console.log(err);
+      console.error(err);
     }
   };
 
   const dbDelete = async () => {
     try {
       await db.transactionAsync(async (tx) => {
-        const result = await tx.executeSqlAsync(`delete from parsers where id = ?;`, [id]);
+        const result = await tx.executeSqlAsync(
+          `delete from parsers where id = ?;`,
+          [id],
+        );
         console.log("DELETED ONE: " + JSON.stringify(result));
       });
       router.replace("./parsers");
     } catch (err) {
       alert(err);
-      console.log(err);
+      console.error(err);
     }
   };
 
   const createTwoButtonAlert = () =>
-    Alert.alert("Warning", `Please confirm you want to delete this parser.`, [
-      {
-        text: "Cancel",
-        onPress: () => console.log("Cancel Pressed"),
-        style: "cancel",
-      },
-      { text: "OK", onPress: dbDelete },
-    ]);
+    Alert.alert(
+      "Warning",
+      `This will also permanently delete the data table linked to this parser. You may want to check out the data export options. If you still want to proceed with deletion, click OK.`,
+      [
+        {
+          text: "Cancel",
+          onPress: () => console.log("Cancel Pressed"),
+          style: "cancel",
+        },
+        { text: "OK", onPress: dbDelete },
+      ],
+    );
 
   const updateFieldNameText = (fieldNameIndex, text) => {
     const updatedFieldNames = [...fieldNames];
@@ -125,8 +122,8 @@ export default function ParserSetupModal() {
     setFieldNames(updatedFieldNames);
   };
 
-  const updatePromptText = (rowIndex, cellIndex, text) => {
-    const updatedRows = rows.map((row) => [...row]);
+  const updatePrompt = (rowIndex, cellIndex, text) => {
+    const updatedRows = [...rows];
     updatedRows[rowIndex][cellIndex] = text;
     setRows(updatedRows);
   };
@@ -150,36 +147,29 @@ export default function ParserSetupModal() {
   };
 
   const addRow = () => {
-    const updatedRows = rows.map((row) => {
-      return [...row];
-    });
-    const newRow = rows[0].map((prompt) => {
+    const updatedRows = [...rows];
+    const newRow = updatedRows[0].map(() => {
       return "";
     });
     updatedRows.push(newRow);
     setRows(updatedRows);
   };
 
-
   const deleteRow = () => {
-    let updatedRows = rows.map((row) => {
-      const updatedRow = [...row];
-      updatedRow.pop();
-      return updatedRow;
-    });
+    const updatedRows = [...rows];
+    updatedRows.pop();
     setRows(updatedRows);
   };
 
   const deleteColumn = () => {
     let updatedFieldNames = [...fieldNames];
     let updatedRows = rows.map((row) => {
-      const updatedRow = [...row];
-      updatedRow.pop();
-      return updatedRow;
+      row.pop();
+      return row;
     });
     updatedFieldNames.pop();
     if (!updatedFieldNames.length) {
-      updatedFieldNames.push("");
+      updatedFieldNames = [""];
       updatedRows = [[""]];
     }
     setFieldNames(updatedFieldNames);
@@ -199,23 +189,21 @@ export default function ParserSetupModal() {
           (_, { rows: { _array } }) => {
             // setName(parserName)
             console.log("GET ONE: " + JSON.stringify(_array));
-            const parsedFields = JSON.parse(_array[0].fields)
-            const parsedPrompts = JSON.parse(_array[0].prompts)
-            setName(_array[0].name)
+            const parsedFields = JSON.parse(_array[0].fields);
+            const parsedPrompts = JSON.parse(_array[0].prompts);
+            setName(_array[0].name);
             setFieldNames(parsedFields);
-            setRows([parsedPrompts])
+            setRows([parsedPrompts]);
           },
           (_, err) => {
             alert(err);
-            console.log(err);
-            return true
-          }
+            console.error(err);
+            return true;
+          },
         );
       });
     }
   }, []);
-
-
 
   // const dbGet = async () => {
   //   try {
@@ -235,10 +223,9 @@ export default function ParserSetupModal() {
   //     router.replace("./parsers");
   //   } catch (err) {
   //     alert(err);
-  //     console.log(err);
+  //     console.error(err);
   //   }
   // };
-
 
   return (
     // <View style={styles.container}>
@@ -281,7 +268,12 @@ export default function ParserSetupModal() {
         <Button icon="plus" mode="text" onPress={addRow} disabled={isLoading}>
           Add row
         </Button>
-        <Button icon="minus" mode="text" onPress={deleteRow} disabled={isLoading}>
+        <Button
+          icon="minus"
+          mode="text"
+          onPress={deleteRow}
+          disabled={isLoading}
+        >
           Delete row
         </Button>
         <Button
@@ -329,44 +321,50 @@ export default function ParserSetupModal() {
 
           <View style={styles.table}>
             <View style={styles.row}>
-              {fieldNames && fieldNames.map((fieldName, fieldNameIndex) => (
-                <View key={fieldNameIndex} style={styles.cell}>
-                  <Button
-                    mode="text"
-                    disabled={isLoading}
-                    onPress={() => { setFieldNameModalIndex(fieldNameIndex); setModalText(fieldName)}}
-                    labelStyle={{
-                      textDecorationLine: "underline",
-                      color:
-                        !isValidated || (isValidated && fieldName) ? "blue" : "red",
-                    }}
-                  >
-                    {fieldName
-                      ? fieldName.length > 20
-                        ? fieldName.substring(0, 20) + "..."
-                        : fieldName
-                      : "Field name"}
-                  </Button>
-                  <Portal>
-                    <Modal
-                      visible={fieldNameModalIndex === fieldNameIndex}
-                      onDismiss={() => {
-                        setFieldNameModalIndex(null);
-                        updateFieldNameText(fieldNameIndex, modalText);
+              {fieldNames &&
+                fieldNames.map((fieldName, fieldNameIndex) => (
+                  <View key={fieldNameIndex} style={styles.cell}>
+                    <Button
+                      mode="text"
+                      disabled={isLoading}
+                      onPress={() => {
+                        setFieldNameModalIndex(fieldNameIndex);
+                        setModalText(fieldName);
                       }}
-                      contentContainerStyle={styles.modal}
+                      labelStyle={{
+                        textDecorationLine: "underline",
+                        color:
+                          !isValidated || (isValidated && fieldName)
+                            ? "blue"
+                            : "red",
+                      }}
                     >
-                      <TextInput
-                        label={"Field name"}
-                        value={modalText}
-                        onChangeText={(text) => {
-                          setModalText(text);
+                      {fieldName
+                        ? fieldName.length > 20
+                          ? fieldName.substring(0, 20) + "..."
+                          : fieldName
+                        : "Field name"}
+                    </Button>
+                    <Portal>
+                      <Modal
+                        visible={fieldNameModalIndex === fieldNameIndex}
+                        onDismiss={() => {
+                          setFieldNameModalIndex(null);
+                          updateFieldNameText(fieldNameIndex, modalText);
                         }}
-                      />
-                    </Modal>
-                  </Portal>
-                </View>
-              ))}
+                        contentContainerStyle={styles.modal}
+                      >
+                        <TextInput
+                          label={"Field name"}
+                          value={modalText}
+                          onChangeText={(text) => {
+                            setModalText(text);
+                          }}
+                        />
+                      </Modal>
+                    </Portal>
+                  </View>
+                ))}
             </View>
 
             {rows.slice(from, to).map((row, rowIndex) => (
@@ -403,7 +401,7 @@ export default function ParserSetupModal() {
                         }
                         onDismiss={() => {
                           setCellModalIndex(null);
-                          updatePromptText(rowIndex, cellIndex, modalText);
+                          updatePrompt(rowIndex, cellIndex, modalText);
                         }}
                         contentContainerStyle={styles.modal}
                       >
@@ -485,23 +483,22 @@ const styles = StyleSheet.create({
   tableButtonContainer: {
     alignItems: "flex-start",
     marginBottom: 10,
-    marginLeft: 16
+    marginLeft: 16,
   },
   scrollView: {
     flexGrow: 1,
     marginBottom: 10,
-    paddingHorizontal: 16
+    paddingHorizontal: 16,
     //width: 300,
     // justifyContent: "center",
   },
   scrollViewContainer: {
-    
     //width: 300,
   },
   modal: {
     backgroundColor: "white",
     padding: 20,
-    marginHorizontal: 16
+    marginHorizontal: 16,
   },
   tableTitleContainer: {
     alignItems: "center",
@@ -533,7 +530,7 @@ const styles = StyleSheet.create({
   pagination: {
     backgroundColor: "white",
     marginBottom: 20,
-    marginHorizontal: 16
+    marginHorizontal: 16,
   },
   saveButtonContainer: {
     alignItems: "center",
