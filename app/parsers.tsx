@@ -10,12 +10,12 @@ import { db } from "./_layout";
 
 export default function ParserSelectionModal() {
   const [parsers, setParsers] = useState([]);
-  const [tables, setTables] = useState([]);
+  const [imagesData, setImagesData] = useState([]);
   const [checked, setChecked] = useState(null);
 
   const scan = async () => {
     try {
-      const table = tables.filter((table) => table.parser_id === checked);
+      const imageData = imagesData.filter((imageData) => imageData.parser_id === checked);
       const parser = parsers.filter((parser) => parser.id === checked);
       //send stringified parsers.rows[0] to backend
       //backend returns stringified array of string values
@@ -45,8 +45,8 @@ export default function ParserSelectionModal() {
         const result = await tx.executeSqlAsync(`delete from parsers;`, []);
         setParsers([]);
         console.log("DELETED ALL PARSERS: " + JSON.stringify(result));
-        const x = await tx.executeSqlAsync("select * from tables", []);
-        console.log("GET ALL TABLES (SHOULD BE NONE): " + JSON.stringify(x));
+        const x = await tx.executeSqlAsync("select * from images_data", []);
+        console.log("GET ALL IMAGE DATA (SHOULD BE NONE): " + JSON.stringify(x));
       });
     } catch (err) {
       alert(err);
@@ -63,10 +63,10 @@ export default function ParserSelectionModal() {
         );
         console.log("DROPPED TABLE parsers: " + JSON.stringify(result1));
         const result2 = await tx.executeSqlAsync(
-          `drop table if exists tables`,
+          `drop table if exists images_data`,
           [],
         );
-        console.log("DROPPED TABLE tables: " + JSON.stringify(result2));
+        console.log("DROPPED TABLE images_data: " + JSON.stringify(result2));
       });
     } catch (err) {
       alert(err);
@@ -84,11 +84,11 @@ export default function ParserSelectionModal() {
           setParsers(_array);
           setChecked(_array.length ? _array[0].name : null);
           tx.executeSql(
-            "select * from tables",
+            "select * from images_data",
             [],
             (_, { rows: { _array } }) => {
-              console.log("GET ALL TABLES: " + JSON.stringify(_array));
-              setTables(_array);
+              console.log("GET ALL images_data: " + JSON.stringify(_array));
+              setImagesData(_array);
             },
             (_, err) => {
               alert(err);

@@ -105,7 +105,7 @@ export default function ParserSetupModal() {
   const createTwoButtonAlert = () =>
     Alert.alert(
       "Warning",
-      `This will also permanently delete the data table linked to this parser. You may want to check out the data export options. If you still want to proceed with deletion, click OK.`,
+      `This will also permanently delete the scanned image data generated from this parser. You may want to first check out the data export options. If you still want to proceed with deletion, click OK.`,
       [
         {
           text: "Cancel",

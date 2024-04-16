@@ -1,5 +1,4 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-//import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -7,7 +6,6 @@ import { useEffect } from "react";
 import { PaperProvider } from "react-native-paper";
 import * as SQLite from "expo-sqlite";
 
-//import { useColorScheme } from '@/components/useColorScheme';
 
 export const db = SQLite.openDatabase("db.db");
 
@@ -49,10 +47,10 @@ export default function RootLayout() {
         (_, result) => {
           console.log("CREATED PARSERS TABLE: " + JSON.stringify(result));
           tx.executeSql(
-            "create table if not exists tables (id integer primary key not null, name text unique, fields text, data text, parser_id integer, foreign key(parser_id) references parsers(id));",
+            "create table if not exists images_data (id integer primary key not null, name text unique, fields text, data text, parser_id integer, foreign key(parser_id) references parsers(id));",
             [],
             (_, result) => {
-              console.log("CREATED TABLES TABLE: " + JSON.stringify(result));
+              console.log("CREATED IMAGES_DATA TABLE: " + JSON.stringify(result));
             },
             (_, err) => {
               alert(err);
@@ -75,7 +73,6 @@ export default function RootLayout() {
   }
 
   return (
-    // <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
     <PaperProvider>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -88,7 +85,6 @@ export default function RootLayout() {
           options={{ presentation: "modal", title: "Parser setup" }}
         />
       </Stack>
-      {/* </ThemeProvider> */}
     </PaperProvider>
   );
 }
