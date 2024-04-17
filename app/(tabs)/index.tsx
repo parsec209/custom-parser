@@ -10,17 +10,16 @@ export default function ScannerPage() {
 
   const [status, requestPermission] = ImagePicker.useCameraPermissions();
 
-  const pickImage = async (imageNumber) => {
+  const pickImage = async (imageIndex) => {
     let result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
       quality: 1,
     });
+    return assets ? assets[0].uri : assets;
     if (!result.canceled) {
       imageNumber === 1
         ? setSelectedImage1(result.assets[0].uri)
         : setSelectedImage2(result.assets[0].uri);
-    } else {
-      alert("No image selected");
     }
   };
 
@@ -29,16 +28,16 @@ export default function ScannerPage() {
     if (pendingResult && pendingResult.length > 0) {
       console.log(pendingResult);
     }
-    let result = await ImagePicker.launchCameraAsync({
+    let { assets } = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       quality: 1,
     });
+    return assets ? assets[0].uri : assets;
+
     if (!result.canceled) {
       imageNumber === 1
         ? setSelectedImage1(result.assets[0].uri)
         : setSelectedImage2(result.assets[0].uri);
-    } else {
-      alert("No image selected");
     }
   };
 
@@ -58,7 +57,7 @@ export default function ScannerPage() {
             {selectedImage1 ? (
               <Image source={{ uri: selectedImage1 }} style={styles.image} />
             ) : (
-              <View style={styles.imageIconContainer}>
+              <View style={styles.imageSelectorIconsContainer}>
                 <IconButton
                   icon="camera"
                   iconColor="black"
@@ -90,7 +89,7 @@ export default function ScannerPage() {
             {selectedImage2 ? (
               <Image source={{ uri: selectedImage2 }} style={styles.image} />
             ) : (
-              <View style={styles.imageIconContainer}>
+              <View style={styles.imageSelectorIconsContainer}>
                 <IconButton
                   icon="camera"
                   iconColor="black"
@@ -116,7 +115,7 @@ export default function ScannerPage() {
           </Button>
         </View>
       </View>
-      
+
       <Button
         mode="contained"
         buttonColor="blue"
@@ -153,7 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: "lightgray",
     marginHorizontal: 10,
   },
-  imageIconContainer: {
+  imageSelectorIconsContainer: {
     flexDirection: "row",
   },
   image: {
@@ -165,4 +164,3 @@ const styles = StyleSheet.create({
     marginVertical: 30,
   },
 });
-

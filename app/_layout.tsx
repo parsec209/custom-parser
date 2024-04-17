@@ -2,10 +2,13 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PaperProvider } from "react-native-paper";
 import * as SQLite from "expo-sqlite";
 
+import { SelectedImagesProvider } from "../contexts/selectedImagesContext";
+
+const [selectedImages, setSelectedImages] = useState([null, null]);
 
 export const db = SQLite.openDatabase("db.db");
 
@@ -50,7 +53,9 @@ export default function RootLayout() {
             "create table if not exists images_data (id integer primary key not null, name text unique, fields text, data text, parser_id integer, foreign key(parser_id) references parsers(id));",
             [],
             (_, result) => {
-              console.log("CREATED IMAGES_DATA TABLE: " + JSON.stringify(result));
+              console.log(
+                "CREATED IMAGES_DATA TABLE: " + JSON.stringify(result),
+              );
             },
             (_, err) => {
               alert(err);
@@ -74,17 +79,24 @@ export default function RootLayout() {
 
   return (
     <PaperProvider>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="parsers"
-          options={{ presentation: "modal", title: "Parser selection" }}
-        />
-        <Stack.Screen
-          name="parser"
-          options={{ presentation: "modal", title: "Parser setup" }}
-        />
-      </Stack>
+      <SelectedImagesProvider
+        value={{
+          selectedImages,
+          setSelectedImages,
+        }}
+      >
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="parsers"
+            options={{ presentation: "modal", title: "Parser selection" }}
+          />
+          <Stack.Screen
+            name="parser"
+            options={{ presentation: "modal", title: "Parser setup" }}
+          />
+        </Stack>
+      </SelectedImagesProvider>
     </PaperProvider>
   );
 }
