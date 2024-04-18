@@ -1,66 +1,45 @@
 import { useContext } from "react";
 import { StyleSheet, View } from "react-native";
 import { IconButton } from "react-native-paper";
-import * as ImagePicker from "expo-image-picker";
 
-import { SelectedImagesContext } from "../contexts/ImageSelectorIconsContainer";
+import { SelectedImagesContext } from "../contexts/selectedImagesContext";
+import { takePhoto, pickImage } from "../services/imagePickerService";
 
+export default function ImageSelectorIconsContainer({ selectedImagesIndex }) {
+  const [selectedImages, setSelectedImages] = useContext(SelectedImagesContext); // as GamesContextType (example), type is defined in context file;
 
-export default function ImageSelectorIconsContainer() {
-  const [selectedImages, setSelectedImages] = useContext(SelectedImagesContext) // as GamesContextType (example), type is defined in context file;
-
-  const [status, requestPermission] = ImagePicker.useCameraPermissions();
-
-  const pickImage = async () => {
-    const { assets } = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-    return assets ? assets[0].uri : assets
-  };
-
-  const takePhoto = async () => {
-    const pendingResult = await ImagePicker.getPendingResultAsync();
-    if (pendingResult && pendingResult.length > 0) {
-      console.log(pendingResult);
+  const getAndSetSelectedImages = async (iconType, selectedImagesIndex) => {
+    let image = null;
+    if (iconType === "camera") {
+      image = await takePhoto();
+    } else {
+      image = await pickImage();
     }
-    const { assets } = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-    return assets ? assets[0].uri : assets
+    const updatedSelectedImages = [...selectedImages];
+    updatedSelectedImages[selectedImagesIndex] = image;
+    setSelectedImages(updatedSelectedImages);
   };
-
-  if (status === null) {
-    requestPermission();
-  }
 
   return (
-
-              <View style={styles.container}>
-                <IconButton
-              icon="camera"
-              iconColor="black"
-              size={40}
-              onPress={() => takePhoto()
-                />
-                <IconButton
-                  icon="upload"
-                  iconColor="black"
-                  size={40}
-                  onPress={() => pickImage()}
-                />
-              </View>
-         
+    <View style={styles.container}>
+      <IconButton
+        icon="camera"
+        iconColor="black"
+        size={40}
+        onPress={() => getAndSetSelectedImages("camera", selectedImagesIndex)}
+      />
+      <IconButton
+        icon="upload"
+        iconColor="black"
+        size={40}
+        onPress={() => getAndSetSelectedImages("upload", selectedImagesIndex)}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
- 
-
   container: {
     flexDirection: "row",
   },
-
 });
-

@@ -7,7 +7,7 @@ import { createContext } from "react";
 
 //export const selectedImagesContext = createContext<GamesContextType>({
 export const SelectedImagesContext = createContext({
-  selectedImages: [],
+  selectedImages: [null, null],
   setSelectedImages: () => {},
 });
 
