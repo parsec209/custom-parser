@@ -6,9 +6,9 @@ import { createContext } from "react";
 // }
 
 //export const selectedImagesContext = createContext<GamesContextType>({
-export const SelectedImagesContext = createContext({
-  selectedImages: [],
-  setSelectedImages: () => {},
+export const IsLoadingContext = createContext({
+  isLoading: false,
+  setIsLoading: () => {},
 });
 
-export const SelectedImagesProvider = SelectedImagesContext.Provider;
+export const IsLoadingProvider = IsLoadingContext.Provider;

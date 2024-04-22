@@ -6,9 +6,9 @@ import { createContext } from "react";
 // }
 
 //export const selectedImagesContext = createContext<GamesContextType>({
-export const SelectedImagesContext = createContext({
-  selectedImages: [],
-  setSelectedImages: () => {},
+export const SelectedParserContext = createContext({
+  selectedParser: {},
+  setSelectedParser: () => {},
 });
 
-export const SelectedImagesProvider = SelectedImagesContext.Provider;
+export const SelectedParserProvider = SelectedParserContext.Provider;

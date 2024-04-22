@@ -50,71 +50,57 @@ export default function ParserSetupModal() {
     }
   };
 
-  const dbPost = async () => {
-    try {
-      await db.transactionAsync(async (tx) => {
-        const stringifiedFieldNames = JSON.stringify(fieldNames);
-        const stringifiedRow = JSON.stringify(rows[0]);
-        const result = await tx.executeSqlAsync(
-          "insert into parsers (name, fields, prompts) values (?, ?, ?)",
-          [name, stringifiedFieldNames, stringifiedRow],
-        );
-        console.log("POSTED: " + JSON.stringify(result));
-      });
-      router.replace("./parsers");
-    } catch (err) {
-      alert(err);
-      console.error(err);
-    }
-  };
+  // const dbPost = async () => {
+  //   try {
+  //     await db.transactionAsync(async (tx) => {
+  //       const stringifiedFieldNames = JSON.stringify(fieldNames);
+  //       const stringifiedRow = JSON.stringify(rows[0]);
+  //       const result = await tx.executeSqlAsync(
+  //         "insert into parsers (name, fields, prompts) values (?, ?, ?)",
+  //         [name, stringifiedFieldNames, stringifiedRow],
+  //       );
+  //       console.log("POSTED: " + JSON.stringify(result));
+  //     });
+  //     router.replace("./parsers");
+  //   } catch (err) {
+  //     alert(err);
+  //     console.error(err);
+  //   }
+  // };
 
-  const dbEdit = async () => {
-    try {
-      await db.transactionAsync(async (tx) => {
-        const stringifiedFieldNames = JSON.stringify(fieldNames);
-        const stringifiedRow = JSON.stringify(rows[0]);
-        const result = await tx.executeSqlAsync(
-          `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
-          [name, stringifiedFieldNames, stringifiedRow, id],
-        );
-        console.log("UPDATED: " + JSON.stringify(result));
-      });
-      router.replace("./parsers");
-    } catch (err) {
-      alert(err);
-      console.error(err);
-    }
-  };
+  // const dbEdit = async () => {
+  //   try {
+  //     await db.transactionAsync(async (tx) => {
+  //       const stringifiedFieldNames = JSON.stringify(fieldNames);
+  //       const stringifiedRow = JSON.stringify(rows[0]);
+  //       const result = await tx.executeSqlAsync(
+  //         `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
+  //         [name, stringifiedFieldNames, stringifiedRow, id],
+  //       );
+  //       console.log("UPDATED: " + JSON.stringify(result));
+  //     });
+  //     router.replace("./parsers");
+  //   } catch (err) {
+  //     alert(err);
+  //     console.error(err);
+  //   }
+  // };
 
-  const dbDelete = async () => {
-    try {
-      await db.transactionAsync(async (tx) => {
-        const result = await tx.executeSqlAsync(
-          `delete from parsers where id = ?;`,
-          [id],
-        );
-        console.log("DELETED ONE: " + JSON.stringify(result));
-      });
-      router.replace("./parsers");
-    } catch (err) {
-      alert(err);
-      console.error(err);
-    }
-  };
-
-  const createTwoButtonAlert = () =>
-    Alert.alert(
-      "Warning",
-      `This will also permanently delete the scanned image data generated from this parser. You may want to first check out the data export options. If you still want to proceed with deletion, click OK.`,
-      [
-        {
-          text: "Cancel",
-          onPress: () => console.log("Cancel Pressed"),
-          style: "cancel",
-        },
-        { text: "OK", onPress: dbDelete },
-      ],
-    );
+  // const dbDelete = async () => {
+  //   try {
+  //     await db.transactionAsync(async (tx) => {
+  //       const result = await tx.executeSqlAsync(
+  //         `delete from parsers where id = ?;`,
+  //         [id],
+  //       );
+  //       console.log("DELETED ONE: " + JSON.stringify(result));
+  //     });
+  //     router.replace("./parsers");
+  //   } catch (err) {
+  //     alert(err);
+  //     console.error(err);
+  //   }
+  // };
 
   const updateFieldNameText = (fieldNameIndex, text) => {
     const updatedFieldNames = [...fieldNames];
@@ -180,30 +166,30 @@ export default function ParserSetupModal() {
     setPage(0);
   }, [itemsPerPage]);
 
-  useEffect(() => {
-    if (id) {
-      db.transaction((tx) => {
-        tx.executeSql(
-          "select * from parsers where id = ?;",
-          [id],
-          (_, { rows: { _array } }) => {
-            // setName(parserName)
-            console.log("GET ONE: " + JSON.stringify(_array));
-            const parsedFields = JSON.parse(_array[0].fields);
-            const parsedPrompts = JSON.parse(_array[0].prompts);
-            setName(_array[0].name);
-            setFieldNames(parsedFields);
-            setRows([parsedPrompts]);
-          },
-          (_, err) => {
-            alert(err);
-            console.error(err);
-            return true;
-          },
-        );
-      });
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (id) {
+  //     db.transaction((tx) => {
+  //       tx.executeSql(
+  //         "select * from parsers where id = ?;",
+  //         [id],
+  //         (_, { rows: { _array } }) => {
+  //           // setName(parserName)
+  //           console.log("GET ONE: " + JSON.stringify(_array));
+  //           const parsedFields = JSON.parse(_array[0].fields);
+  //           const parsedPrompts = JSON.parse(_array[0].prompts);
+  //           setName(_array[0].name);
+  //           setFieldNames(parsedFields);
+  //           setRows([parsedPrompts]);
+  //         },
+  //         (_, err) => {
+  //           alert(err);
+  //           console.error(err);
+  //           return true;
+  //         },
+  //       );
+  //     });
+  //   }
+  // }, []);
 
   // const dbGet = async () => {
   //   try {
@@ -228,7 +214,6 @@ export default function ParserSetupModal() {
   // };
 
   return (
-    // <View style={styles.container}>
     <KeyboardAvoidingView
       behavior="height"
       style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}
@@ -450,16 +435,7 @@ export default function ParserSetupModal() {
           Save
         </Button>
       </View>
-      {id && (
-        <Button
-          mode="contained"
-          buttonColor="blue"
-          onPress={createTwoButtonAlert}
-          disabled={isLoading}
-        >
-          Delete
-        </Button>
-      )}
+
       {/* </View> */}
     </KeyboardAvoidingView>
   );

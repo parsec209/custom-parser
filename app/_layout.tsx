@@ -1,16 +1,19 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useFonts } from "expo-font";
+import { isLoading, useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { PaperProvider } from "react-native-paper";
-import * as SQLite from "expo-sqlite";
 
 import { SelectedImagesProvider } from "../contexts/selectedImagesContext";
+import { ParsersProvider } from "../contexts/parsersContext";
+import { SelectedParserProvider } from "../contexts/selectedParserContext";
+import { createTables } from "../services/postService";
 
 const [selectedImages, setSelectedImages] = useState([null, null]);
-
-export const db = SQLite.openDatabase("db.db");
+const [parsers, setParsers] = useState([]);
+const [selectedParser, setSelectedParser] = useState(null);
+const [isLoading, setIsLoading] = useState(false);
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -43,34 +46,21 @@ export default function RootLayout() {
   }, [loaded]);
 
   useEffect(() => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        "create table if not exists parsers (id integer primary key not null, name text unique, fields text, prompts text);",
-        [],
-        (_, result) => {
-          console.log("CREATED PARSERS TABLE: " + JSON.stringify(result));
-          tx.executeSql(
-            "create table if not exists images_data (id integer primary key not null, name text unique, fields text, data text, parser_id integer, foreign key(parser_id) references parsers(id));",
-            [],
-            (_, result) => {
-              console.log(
-                "CREATED IMAGES_DATA TABLE: " + JSON.stringify(result),
-              );
-            },
-            (_, err) => {
-              alert(err);
-              console.error(err);
-              return true;
-            },
-          );
-        },
-        (_, err) => {
-          alert(err);
-          console.error(err);
-          return true;
-        },
-      );
-    });
+    let isMounted = true;
+    (async () => {
+      if (!isMounted) {
+        return;
+      }
+      try {
+        await createTables();
+      } catch (err) {
+        alert(err);
+        console.error(err);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (!loaded) {
@@ -85,17 +75,37 @@ export default function RootLayout() {
           setSelectedImages,
         }}
       >
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="parsers"
-            options={{ presentation: "modal", title: "Parser selection" }}
-          />
-          <Stack.Screen
-            name="parser"
-            options={{ presentation: "modal", title: "Parser setup" }}
-          />
-        </Stack>
+        <ParsersProvider
+          value={{
+            parsers,
+            setParsers,
+          }}
+        >
+          <SelectedParserProvider
+            value={{
+              selectedParser,
+              setSelectedParser,
+            }}
+          >
+          <IsLoadingProvider
+            value={{
+              isLoading,
+              setIsLoading,
+            }}
+          >
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="parsers"
+                options={{ presentation: "modal", title: "Parser selection" }}
+              />
+              <Stack.Screen
+                name="parser"
+                options={{ presentation: "modal", title: "Parser setup" }}
+              />
+            </Stack>
+          </SelectedParserProvider>
+        </ParsersProvider>
       </SelectedImagesProvider>
     </PaperProvider>
   );

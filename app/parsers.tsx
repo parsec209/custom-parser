@@ -1,163 +1,164 @@
-import { useState, useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { Platform, StyleSheet, View } from "react-native";
-import { Text, RadioButton, Button } from "react-native-paper";
+import { useState, useContext, useEffect } from "react";
+import { StyleSheet, View, Alert } from "react-native";
+import { Text, Button, RadioButton } from "react-native-paper";
 import { Link } from "expo-router";
-import { db } from "./_layout";
 
-//import EditScreenInfo from '@/components/EditScreenInfo';
-//import { Text, View } from '@/components/Themed';
+import { SelectedParserContext } from "../contexts/selectedParserContext";
+import { IsLoadingContext } from "../contexts/isLoadingContext";
+import { ParsersContext } from "../contexts/parsersContext";
+import {
+  getAllImagesData,
+  getAllParsers,
+  deleteAll,
+  dropAll,
+  deleteParser,
+} from "../services/postService";
 
 export default function ParserSelectionModal() {
-  const [parsers, setParsers] = useState([]);
+  const [selectedParser, setSelectedParser] = useContext(SelectedParserContext); // as GamesContextType (example), type is defined in context file;
+  const [parsers, setParsers] = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
+  const [isLoading, setIsLoading] = useContext(IsLoadingContext);
   const [imagesData, setImagesData] = useState([]);
-  const [checked, setChecked] = useState(null);
 
-  const scan = async () => {
-    try {
-      const imageData = imagesData.filter((imageData) => imageData.parser_id === checked);
-      const parser = parsers.filter((parser) => parser.id === checked);
-      //send stringified parsers.rows[0] to backend
-      //backend returns stringified array of string values
-      const values = []
-      const newTableRow = [];
-      const tableFieldNames = table.fields
-      for (let i = 0; i < values.length; i++) {
-        let value = values[i]
-        for (let j = 0; j < tableFieldNames.length; j++) {
-          let tableFieldName = tableFieldNames[j]
-          if (condition) {
-            const element = array[index];
-            const element = array[index];
-          }
-        }
-        for
-      }
-    } catch (err) {
-      alert(err);
-      console.error(err);
-    }
-  };
-
-  const deleteAll = async () => {
-    try {
-      await db.transactionAsync(async (tx) => {
-        const result = await tx.executeSqlAsync(`delete from parsers;`, []);
-        setParsers([]);
-        console.log("DELETED ALL PARSERS: " + JSON.stringify(result));
-        const x = await tx.executeSqlAsync("select * from images_data", []);
-        console.log("GET ALL IMAGE DATA (SHOULD BE NONE): " + JSON.stringify(x));
-      });
-    } catch (err) {
-      alert(err);
-      console.error(err);
-    }
-  };
-
-  const dropAll = async () => {
-    try {
-      await db.transactionAsync(async (tx) => {
-        const result1 = await tx.executeSqlAsync(
-          `drop table if exists parsers`,
-          [],
-        );
-        console.log("DROPPED TABLE parsers: " + JSON.stringify(result1));
-        const result2 = await tx.executeSqlAsync(
-          `drop table if exists images_data`,
-          [],
-        );
-        console.log("DROPPED TABLE images_data: " + JSON.stringify(result2));
-      });
-    } catch (err) {
-      alert(err);
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        "select * from parsers order by name asc;",
-        [],
-        (_, { rows: { _array } }) => {
-          console.log("GET ALL PARSERS: " + JSON.stringify(_array));
-          setParsers(_array);
-          setChecked(_array.length ? _array[0].name : null);
-          tx.executeSql(
-            "select * from images_data",
-            [],
-            (_, { rows: { _array } }) => {
-              console.log("GET ALL images_data: " + JSON.stringify(_array));
-              setImagesData(_array);
-            },
-            (_, err) => {
-              alert(err);
-              console.error(err);
-              return true;
-            },
-          );
+  const createTwoButtonAlert = () =>
+    Alert.alert(
+      "Warning",
+      `This will also permanently delete this parser's scanned image data table. Please check out the data export options first. If you still want to proceed with deletion, click OK.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
         },
-        (_, err) => {
-          alert(err);
-          console.error(err);
-          return true;
+        {
+          text: "OK",
+          onPress: () => {
+            deleteParser(selectedParser.id);
+          },
         },
-      );
-    });
-  }, []);
+      ],
+    );
 
-  const parserSelections = parsers.map(({ id, name }) => (
-    <View style={styles.parserSelection} key={id}>
+  const parsersList = parsers.map((parser) => (
+    <View style={styles.parserSelection} key={parser.id}>
       <RadioButton
-        value={id}
-        status={checked === id ? "checked" : "unchecked"}
-        onPress={() => setChecked(id)}
-      />
-      <Button
-        mode="text"
-        onPress={() => {}}
-        labelStyle={{
-          textDecorationLine: "underline",
-          color: "blue",
+        value={parser.id}
+        status={selectedParser.id === parser.id ? "checked" : "unchecked"}
+        onPress={() => {
+          setSelectedParser(parser);
         }}
-      >
-        <Link href={`./parser?id=${id}`}>{name}</Link>
-      </Button>
+      />
+      <Text variant="labelMedium">{parser.name}</Text>
     </View>
   ));
 
+  const scan = async () => {
+    //   try {
+    // const result = await getAllImagesData();
+    // setImagesData(result);
+    //     const imageData = imagesData.filter((imageData) => imageData.parser_id === checked);
+    //     const parser = parsers.filter((parser) => parser.id === checked);
+    //     //send stringified parsers.rows[0] to backend
+    //     //backend returns stringified array of string values
+    //     const values = []
+    //     const newTableRow = [];
+    //     const tableFieldNames = table.fields
+    //     for (let i = 0; i < values.length; i++) {
+    //       let value = values[i]
+    //       for (let j = 0; j < tableFieldNames.length; j++) {
+    //         let tableFieldName = tableFieldNames[j]
+    //         if (condition) {
+    //           const element = array[index];
+    //           const element = array[index];
+    //         }
+    //       }
+    //       for
+    //     }
+    //   } catch (err) {
+    //     alert(err);
+    //     console.error(err);
+    //   }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      if (!isMounted) {
+        return;
+      }
+      try {
+        setIsLoading(true);
+        const result = await getAllParsers();
+        setParsers(result);
+        setSelectedParser(
+          result.length ? (selectedParser ? selectedParser : result[0]) : null,
+        );
+        setIsLoading(false);
+      } catch (err) {
+        alert(err);
+        console.error(err);
+        setIsLoading(false);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}>
       <Text style={styles.title} variant="headlineMedium">
         Select a parser
       </Text>
-      <View style={styles.parsersContainer}>{parserSelections}</View>
-
-      <Button icon="plus" mode="text" onPress={() => {}}>
+      <View style={styles.parsersList}>{parsersList}</View>
+      <Button icon="plus" mode="text" disabled={isLoading} onPress={() => {}}>
         <Link href="./parser">Add new parser</Link>
       </Button>
-
+      {parsers.length && (
+        <>
+          <Button
+            icon="pencil-outline"
+            mode="text"
+            disabled={isLoading}
+            onPress={() => {}}
+          >
+            <Link href={`./parser?id=${selectedParser.id}`}>
+              Edit selected parser
+            </Link>
+          </Button>
+          <Button
+            mode="text"
+            buttonColor="red"
+            onPress={createTwoButtonAlert}
+            disabled={isLoading}
+          >
+            Delete selected parser
+          </Button>
+        </>
+      )}
       <Button
         style={styles.scanButton}
         icon="scan-helper"
         mode="contained"
         buttonColor="blue"
         onPress={scan}
-        disabled={!parsers.length}
+        disabled={!parsers.length || isLoading}
       >
         Start scan
       </Button>
-
       <Button
-        mode="contained"
+        mode="text"
         buttonColor="red"
         onPress={deleteAll}
-        disabled={!parsers.length}
+        disabled={!parsers.length || isLoading}
       >
         Delete All Parsers
       </Button>
-
-      <Button mode="contained" buttonColor="red" onPress={dropAll}>
+      <Button
+        mode="text"
+        buttonColor="red"
+        onPress={dropAll}
+        disabled={isLoading}
+      >
         Drop All SQL Tables
       </Button>
     </View>
@@ -170,23 +171,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  parsersContainer: {
-    alignItems: "flex-start",
-  },
-  parserSelection: {
-    flexDirection: "row",
-  },
   title: {
     fontSize: 25,
     fontWeight: "bold",
     marginVertical: 20,
   },
+  parsersList: {
+    alignItems: "flex-start",
+  },
+  parserSelection: {
+    flexDirection: "row",
+  },
+
   scanButton: {
     marginVertical: 20,
   },
-  // separator: {
-  //   marginVertical: 30,
-  //   height: 1,
-  //   width: "80%",
-  // },
 });
