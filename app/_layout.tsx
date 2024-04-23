@@ -96,7 +96,7 @@ export default function RootLayout() {
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
-                name="parsers"
+                name="parsersModal"
                 options={{ presentation: "modal", title: "Parser selection" }}
               />
               <Stack.Screen

@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Divider, Text, Button } from "react-native-paper";
 import { Link } from "expo-router";
 
-import ImageSelectionContainer from "../../components/ImageSelectionContainer";
+import ImageSelection from "../../components/ImageSelection";
 
 export default function ScannerPage() {
   return (
@@ -11,9 +11,9 @@ export default function ScannerPage() {
       <Text variant="bodyMedium">Use camera or photo library.</Text>
       <Divider bold style={styles.divider} />
 
-      <View style={styles.imageSelectionsContainer}>
-        <ImageSelectionContainer selectedImagesIndex={0} />
-        <ImageSelectionContainer selectedImagesIndex={1} />
+      <View style={styles.imageSelections}>
+        <ImageSelection selectedImagesIndex={0} />
+        <ImageSelection selectedImagesIndex={1} />
       </View>
 
       <Button
@@ -22,7 +22,7 @@ export default function ScannerPage() {
         //disabled={!selectedImages[0] && !selectedImage2}
         onPress={() => {}}
       >
-        <Link href="../parsers">Select parser</Link>
+        <Link href="../parsersModal">Select parser</Link>
       </Button>
     </View>
   );
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     height: 1,
     width: "80%",
   },
-  imageSelectionsContainer: {
+  imageSelections: {
     flexDirection: "row",
     alignItems: "center",
   },
