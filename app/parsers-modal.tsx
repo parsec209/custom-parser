@@ -8,7 +8,7 @@ import { ParsersContext } from "../contexts/parsersContext";
 import { getAllImagesData } from "../services/postService";
 import { ParserSelections } from "../components/ParserSelections";
 
-export default function ParserSelectionModal() {
+export default function ParsersModal() {
   const [selectedParser, setSelectedParser] = useContext(SelectedParserContext); // as GamesContextType (example), type is defined in context file;
   const [parsers, setParsers] = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
   const [isLoading, setIsLoading] = useContext(IsLoadingContext);

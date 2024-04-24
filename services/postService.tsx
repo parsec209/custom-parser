@@ -50,7 +50,11 @@ export const getParser = async (id) => {
         rows: { _array },
       } = await tx.executeSqlAsync("select * from parsers where id = ?;", [id]);
       console.log("GET ONE: " + JSON.stringify(_array));
-      return _array;
+      const result = _array[0];
+      const fieldNames = JSON.parse(result.fields);
+      const row = JSON.parse(result.prompts);
+      const name = result.name;
+      return { name, fieldNames, row };
     });
     return result;
   } catch (err) {

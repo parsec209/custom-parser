@@ -15,15 +15,15 @@ import {
   Modal,
   TextInput,
 } from "react-native-paper";
-import { db } from "./_layout";
+import { getParser, updateParser, postParser } from "../services/postService";
 
-export default function ParserSetupModal() {
+export default function ParserModal() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [fieldNameModalIndex, setFieldNameModalIndex] = useState(null); //string or null
-  const [cellModalIndex, setCellModalIndex] = useState(null); //{ rowIndex, cellIndex } || null
+  const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
+  const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([[""]]);
   const [page, setPage] = useState<number>(0);
@@ -35,6 +35,9 @@ export default function ParserSetupModal() {
   const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [modalText, setModalText] = useState("");
+
+  const from = page * itemsPerPage;
+  const to = Math.min((page + 1) * itemsPerPage, rows.length);
 
   // const delayedFunction = () => {
   //   setTimeout(() => {
@@ -50,57 +53,19 @@ export default function ParserSetupModal() {
     }
   };
 
-  // const dbPost = async () => {
-  //   try {
-  //     await db.transactionAsync(async (tx) => {
-  //       const stringifiedFieldNames = JSON.stringify(fieldNames);
-  //       const stringifiedRow = JSON.stringify(rows[0]);
-  //       const result = await tx.executeSqlAsync(
-  //         "insert into parsers (name, fields, prompts) values (?, ?, ?)",
-  //         [name, stringifiedFieldNames, stringifiedRow],
-  //       );
-  //       console.log("POSTED: " + JSON.stringify(result));
-  //     });
-  //     router.replace("./parsers");
-  //   } catch (err) {
-  //     alert(err);
-  //     console.error(err);
-  //   }
-  // };
+  const postParserAndRedirect = async () => {
+    setIsLoading(true);
+    await postParser(name, fieldNames, rows[0]);
+    setIsLoading(false);
+    router.replace("./parsers-modal");
+  };
 
-  // const dbEdit = async () => {
-  //   try {
-  //     await db.transactionAsync(async (tx) => {
-  //       const stringifiedFieldNames = JSON.stringify(fieldNames);
-  //       const stringifiedRow = JSON.stringify(rows[0]);
-  //       const result = await tx.executeSqlAsync(
-  //         `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
-  //         [name, stringifiedFieldNames, stringifiedRow, id],
-  //       );
-  //       console.log("UPDATED: " + JSON.stringify(result));
-  //     });
-  //     router.replace("./parsers");
-  //   } catch (err) {
-  //     alert(err);
-  //     console.error(err);
-  //   }
-  // };
-
-  // const dbDelete = async () => {
-  //   try {
-  //     await db.transactionAsync(async (tx) => {
-  //       const result = await tx.executeSqlAsync(
-  //         `delete from parsers where id = ?;`,
-  //         [id],
-  //       );
-  //       console.log("DELETED ONE: " + JSON.stringify(result));
-  //     });
-  //     router.replace("./parsers");
-  //   } catch (err) {
-  //     alert(err);
-  //     console.error(err);
-  //   }
-  // };
+  const updateParserAndRedirect = async () => {
+    setIsLoading(true);
+    await updateParser(name, fieldNames, rows[0], id);
+    setIsLoading(false);
+    router.replace("./parsers-modal");
+  };
 
   const updateFieldNameText = (fieldNameIndex, text) => {
     const updatedFieldNames = [...fieldNames];
@@ -113,9 +78,6 @@ export default function ParserSetupModal() {
     updatedRows[rowIndex][cellIndex] = text;
     setRows(updatedRows);
   };
-
-  const from = page * itemsPerPage;
-  const to = Math.min((page + 1) * itemsPerPage, rows.length);
 
   const addColumn = () => {
     const updatedFieldNames = [...fieldNames, ""];
@@ -166,52 +128,31 @@ export default function ParserSetupModal() {
     setPage(0);
   }, [itemsPerPage]);
 
-  // useEffect(() => {
-  //   if (id) {
-  //     db.transaction((tx) => {
-  //       tx.executeSql(
-  //         "select * from parsers where id = ?;",
-  //         [id],
-  //         (_, { rows: { _array } }) => {
-  //           // setName(parserName)
-  //           console.log("GET ONE: " + JSON.stringify(_array));
-  //           const parsedFields = JSON.parse(_array[0].fields);
-  //           const parsedPrompts = JSON.parse(_array[0].prompts);
-  //           setName(_array[0].name);
-  //           setFieldNames(parsedFields);
-  //           setRows([parsedPrompts]);
-  //         },
-  //         (_, err) => {
-  //           alert(err);
-  //           console.error(err);
-  //           return true;
-  //         },
-  //       );
-  //     });
-  //   }
-  // }, []);
-
-  // const dbGet = async () => {
-  //   try {
-  //     await db.transaction((tx) => {
-  //       tx.executeSql(
-  //         "select  * from parsers where id = ?",
-  //         [id],
-  //         (_, { rows: { _array } }) => {
-  //           console.log(
-  //             "GET ONE: " + JSON.stringify(_array),
-  //           );
-  //           setFieldNames(_array[0].fields);
-  //           setRows([_array[0].prompts])
-  //         },
-  //       );
-  //     });;
-  //     router.replace("./parsers");
-  //   } catch (err) {
-  //     alert(err);
-  //     console.error(err);
-  //   }
-  // };
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      if (!isMounted) {
+        return;
+      }
+      if (id) {
+        try {
+          setIsLoading(true);
+          const { name, fieldNames, row } = await getParser(id);
+          setName(name);
+          setFieldNames(fieldNames);
+          setRows([row]);
+          setIsLoading(false);
+        } catch (err) {
+          alert(err);
+          console.error(err);
+          setIsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <KeyboardAvoidingView
@@ -313,7 +254,7 @@ export default function ParserSetupModal() {
                       mode="text"
                       disabled={isLoading}
                       onPress={() => {
-                        setFieldNameModalIndex(fieldNameIndex);
+                        setModalFieldNameIndex(fieldNameIndex);
                         setModalText(fieldName);
                       }}
                       labelStyle={{
@@ -332,9 +273,9 @@ export default function ParserSetupModal() {
                     </Button>
                     <Portal>
                       <Modal
-                        visible={fieldNameModalIndex === fieldNameIndex}
+                        visible={modalFieldNameIndex === fieldNameIndex}
                         onDismiss={() => {
-                          setFieldNameModalIndex(null);
+                          setModalFieldNameIndex(null);
                           updateFieldNameText(fieldNameIndex, modalText);
                         }}
                         contentContainerStyle={styles.modal}
@@ -360,7 +301,7 @@ export default function ParserSetupModal() {
                       mode="text"
                       disabled={isLoading}
                       onPress={() => {
-                        setCellModalIndex({ rowIndex, cellIndex });
+                        setModalFieldDataIndex({ rowIndex, cellIndex });
                         setModalText(prompt);
                       }}
                       labelStyle={{
@@ -380,12 +321,12 @@ export default function ParserSetupModal() {
                     <Portal>
                       <Modal
                         visible={
-                          cellModalIndex !== null &&
-                          cellModalIndex.rowIndex === rowIndex &&
-                          cellModalIndex.cellIndex === cellIndex
+                          modalFieldDataIndex !== null &&
+                          modalFieldDataIndex.rowIndex === rowIndex &&
+                          modalFieldDataIndex.cellIndex === cellIndex
                         }
                         onDismiss={() => {
-                          setCellModalIndex(null);
+                          setModalFieldDataIndex(null);
                           updatePrompt(rowIndex, cellIndex, modalText);
                         }}
                         contentContainerStyle={styles.modal}
