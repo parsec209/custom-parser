@@ -31,8 +31,7 @@ export default function ParserModal() {
   const [itemsPerPage, onItemsPerPageChange] = useState(
     numberOfItemsPerPageList[0],
   );
-  const [isValidated, setIsValidated] = useState(false);
-  const [isValid, setIsValid] = useState(false);
+  const [validations, setValidations] = useState(null); //null || { nameIsValid, fieldNamesAreValid, rowsAreValid }
   const [isLoading, setIsLoading] = useState(false);
   const [modalText, setModalText] = useState("");
 
@@ -47,10 +46,11 @@ export default function ParserModal() {
   //   }, 5000); // Delay of 5 seconds
   // };
 
-  const setValidity = () => {
-    if (name && !fieldNames.includes("") && !rows[0].includes("")) {
-      setIsValid(true);
-    }
+  const getAndSetValidations = () => {
+    const nameIsValid = Boolean(name);
+    const fieldNamesAreValid = Boolean(!fieldNames.includes(""));
+    const rowsAreValid = Boolean(!rows.some((row) => row.includes("")));
+    setValidations({ nameIsValid, fieldNamesAreValid, rowsAreValid });
   };
 
   const postParserAndRedirect = async () => {
@@ -168,7 +168,7 @@ export default function ParserModal() {
           onChangeText={(name) => setName(name)}
           disabled={isLoading}
         />
-        {isValidated && !name && (
+        {validations && !validations.nameIsValid && (
           <Text variant="bodySmall" style={styles.invalidField}>
             Parser name is required.
           </Text>
@@ -213,11 +213,12 @@ export default function ParserModal() {
       </View>
       <View style={styles.tableTitleContainer}>
         <Text variant="titleMedium">Parser table</Text>
-        {isValidated && (fieldNames.includes("") || rows[0].includes("")) && (
-          <Text variant="bodySmall" style={styles.invalidField}>
-            Please fill out any red-highlighted table fields.
-          </Text>
-        )}
+        {validations &&
+          (!validations.fieldNamesAreValid || !validations.rowsAreValid) && (
+            <Text variant="bodySmall" style={styles.invalidField}>
+              Please fill out any red-highlighted table fields.
+            </Text>
+          )}
       </View>
       <View>
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
@@ -259,10 +260,7 @@ export default function ParserModal() {
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
-                        color:
-                          !isValidated || (isValidated && fieldName)
-                            ? "blue"
-                            : "red",
+                        color: !validations || fieldName ? "blue" : "red",
                       }}
                     >
                       {fieldName
@@ -306,10 +304,7 @@ export default function ParserModal() {
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
-                        color:
-                          !isValidated || (isValidated && prompt)
-                            ? "blue"
-                            : "red",
+                        color: !validations || prompt ? "blue" : "red",
                       }}
                     >
                       {prompt
@@ -366,9 +361,9 @@ export default function ParserModal() {
           onPress={() => {
             setIsLoading(true);
             //delayedFunction();
-            setIsValidated(true);
-            setValidity();
-            isValid && (id ? dbEdit() : dbPost());
+            getAndSetValidations();
+            !Object.values(validations).includes(false) &&
+              (id ? updateParserAndRedirect() : postParserAndRedirect());
             setIsLoading(false);
           }}
           buttonColor="blue"
