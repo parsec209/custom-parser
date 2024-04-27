@@ -14,33 +14,69 @@ import {
 } from "../services/postService";
 
 export default function ParserSelections() {
-  const [selectedParser, setSelectedParser] = useContext(SelectedParserContext); // as GamesContextType (example), type is defined in context file;
-  const [parsers, setParsers] = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
-  const [isLoading, setIsLoading] = useContext(IsLoadingContext);
+  const { selectedParser, setSelectedParser } = useContext(
+    SelectedParserContext,
+  ); // as GamesContextType (example), type is defined in context file;
+  const { parsers, setParsers } = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
+  const { isLoading, setIsLoading } = useContext(IsLoadingContext);
+
+  const getAndSetParsers = async () => {
+    try {
+      setIsLoading(true);
+      const result = await getAllParsers();
+      setParsers(result);
+      setSelectedParser(
+        result?.length ? (selectedParser ? selectedParser : result[0]) : null,
+      );
+      setIsLoading(false);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+      setIsLoading(false);
+    }
+  };
 
   const deleteAllAndSetParsers = async () => {
-    setIsLoading(true);
-    await deleteAll();
-    setParsers([]);
-    setSelectedParser(null);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      await deleteAll();
+      setParsers([]);
+      setSelectedParser(null);
+      setIsLoading(false);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+      setIsLoading(false);
+    }
   };
 
   const deleteOneAndSetParsers = async (id) => {
-    setIsLoading(true);
-    await deleteParser(id);
-    const updatedParsers = parsers.filter((parser) => parser.id != id);
-    setParsers(updatedParsers);
-    setSelectedParser(null);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      await deleteParser(id);
+      const updatedParsers = parsers.filter((parser) => parser.id != id);
+      setParsers(updatedParsers);
+      setSelectedParser(null);
+      setIsLoading(false);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+      setIsLoading(false);
+    }
   };
 
   const dropAllDB = async () => {
-    setIsLoading(true);
-    await dropAll();
-    setParsers([]);
-    setSelectedParser(null);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      await dropAll();
+      setParsers([]);
+      setSelectedParser(null);
+      setIsLoading(false);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+      setIsLoading(false);
+    }
   };
 
   const createTwoButtonAlert = () =>
@@ -61,25 +97,11 @@ export default function ParserSelections() {
       ],
     );
 
-  const parsersList = parsers.map((parser) => (
+  const parsersList = parsers?.map((parser) => (
     <View style={styles.parserSelection} key={parser.id}>
       <RadioButton
         value={parser.id}
-        status={selectedParser.id === parser.id ? "checked" : "unchecked"}
-        onPress={() => {
-          setSelectedParser(parser);
-        }}
-        disabled={isLoading}
-      />
-      <Text variant="labelMedium">{parser.name}</Text>
-    </View>
-  ));
-
-  const parsersList = parsers.map((parser) => (
-    <View style={styles.parserSelection} key={parser.id}>
-      <RadioButton
-        value={parser.id}
-        status={selectedParser.id === parser.id ? "checked" : "unchecked"}
+        status={selectedParser?.id === parser.id ? "checked" : "unchecked"}
         onPress={() => {
           setSelectedParser(parser);
         }}
@@ -95,19 +117,7 @@ export default function ParserSelections() {
       if (!isMounted) {
         return;
       }
-      try {
-        setIsLoading(true);
-        const result = await getAllParsers();
-        setParsers(result);
-        setSelectedParser(
-          result.length ? (selectedParser ? selectedParser : result[0]) : null,
-        );
-        setIsLoading(false);
-      } catch (err) {
-        alert(err);
-        console.error(err);
-        setIsLoading(false);
-      }
+      await getAndSetParsers();
     })();
     return () => {
       isMounted = false;
@@ -123,7 +133,7 @@ export default function ParserSelections() {
       <Button icon="plus" mode="text" disabled={isLoading} onPress={() => {}}>
         <Link href="./parser">Add new parser</Link>
       </Button>
-      {parsers.length && (
+      {/* {parsers?.length && (
         <>
           <Button
             icon="pencil-outline"
@@ -131,7 +141,7 @@ export default function ParserSelections() {
             disabled={isLoading}
             onPress={() => {}}
           >
-            <Link href={`./parser?id=${selectedParser.id}`}>
+            <Link href={`./parser?id=${selectedParser?.id}`}>
               Edit selected parser
             </Link>
           </Button>
@@ -144,12 +154,12 @@ export default function ParserSelections() {
             Delete selected parser
           </Button>
         </>
-      )}
+      )} */}
       <Button
         mode="text"
         buttonColor="red"
         onPress={deleteAllAndSetParsers}
-        disabled={!parsers.length || isLoading}
+        disabled={!parsers?.length || isLoading}
       >
         Delete All Parsers
       </Button>

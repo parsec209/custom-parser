@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   KeyboardAvoidingView,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
+
 import {
   Text,
   DataTable,
@@ -16,6 +17,8 @@ import {
   TextInput,
 } from "react-native-paper";
 import { getParser, updateParser, postParser } from "../services/postService";
+import { IsLoadingContext } from "../contexts/isLoadingContext";
+
 
 export default function ParserModal() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -32,8 +35,10 @@ export default function ParserModal() {
     numberOfItemsPerPageList[0],
   );
   const [validations, setValidations] = useState(null); //null || { nameIsValid, fieldNamesAreValid, rowsAreValid }
-  const [isLoading, setIsLoading] = useState(false);
   const [modalText, setModalText] = useState("");
+  const {isLoading, setIsLoading} = useContext(IsLoadingContext);
+
+
 
   const from = page * itemsPerPage;
   const to = Math.min((page + 1) * itemsPerPage, rows.length);

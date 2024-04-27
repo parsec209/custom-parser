@@ -1,5 +1,5 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { isLoading, useFonts } from "expo-font";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
@@ -8,12 +8,10 @@ import { PaperProvider } from "react-native-paper";
 import { SelectedImagesProvider } from "../contexts/selectedImagesContext";
 import { ParsersProvider } from "../contexts/parsersContext";
 import { SelectedParserProvider } from "../contexts/selectedParserContext";
+import { IsLoadingProvider } from "../contexts/isLoadingContext";
 import { createTables } from "../services/postService";
 
-const [selectedImages, setSelectedImages] = useState([null, null]);
-const [parsers, setParsers] = useState([]);
-const [selectedParser, setSelectedParser] = useState(null);
-const [isLoading, setIsLoading] = useState(false);
+
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -29,6 +27,11 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [selectedImages, setSelectedImages] = useState([null, null]);
+  const [parsers, setParsers] = useState([]);
+  const [selectedParser, setSelectedParser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
@@ -52,10 +55,13 @@ export default function RootLayout() {
         return;
       }
       try {
+        setIsLoading(true);
         await createTables();
+        setIsLoading(false);
       } catch (err) {
         alert(err);
         console.error(err);
+        setIsLoading(false);
       }
     })();
     return () => {
@@ -104,6 +110,7 @@ export default function RootLayout() {
                 options={{ presentation: "modal", title: "Parser setup" }}
               />
             </Stack>
+            </IsLoadingProvider>
           </SelectedParserProvider>
         </ParsersProvider>
       </SelectedImagesProvider>

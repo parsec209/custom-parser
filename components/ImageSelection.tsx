@@ -1,14 +1,40 @@
 import { useContext } from "react";
-import { View, Image } from "react-native";
+import { View, Image, StyleSheet } from "react-native";
 import { Button, IconButton } from "react-native-paper";
+import * as ImagePicker from "expo-image-picker";
 
 import { SelectedImagesContext } from "../contexts/selectedImagesContext";
-import { takePhoto, pickImage } from "../services/imagePickerService";
 
-export default function ImageSelectionContainer({ selectedImagesIndex }) {
-  const [selectedImages, setSelectedImages] = useContext(SelectedImagesContext); // as GamesContextType (example), type is defined in context file;
+export default function ImageSelection({ selectedImagesIndex }) {
+  const {selectedImages, setSelectedImages} = useContext(SelectedImagesContext); // as GamesContextType (example), type is defined in context file;
 
-  const getAndSetSelectedImages = async (iconType, selectedImagesIndex) => {
+  const [status, requestPermission] = ImagePicker.useCameraPermissions();
+
+  if (status === null) {
+    requestPermission();
+  }
+
+  const pickImage = async () => {
+    const { assets } = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+    return assets ? assets[0].uri : assets;
+  };
+  
+  const takePhoto = async () => {
+    const pendingResult = await ImagePicker.getPendingResultAsync();
+    if (pendingResult && pendingResult.length > 0) {
+      console.log(pendingResult);
+    }
+    const { assets } = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+    return assets ? assets[0].uri : assets;
+  };
+
+  const getAndSetSelectedImages = async (iconType) => {
     let image = null;
     if (iconType === "camera") {
       image = await takePhoto();
@@ -41,7 +67,7 @@ export default function ImageSelectionContainer({ selectedImagesIndex }) {
               iconColor="black"
               size={40}
               onPress={() =>
-                getAndSetSelectedImages("camera", selectedImagesIndex)
+                getAndSetSelectedImages("camera")
               }
             />
             <IconButton
@@ -49,7 +75,7 @@ export default function ImageSelectionContainer({ selectedImagesIndex }) {
               iconColor="black"
               size={40}
               onPress={() =>
-                getAndSetSelectedImages("upload", selectedImagesIndex)
+                getAndSetSelectedImages("upload")
               }
             />
           </View>
@@ -60,7 +86,7 @@ export default function ImageSelectionContainer({ selectedImagesIndex }) {
         style={
           selectedImages[selectedImagesIndex] ? { opacity: 1 } : { opacity: 0 }
         }
-        onPress={resetImage}
+        onPress={() => resetImage()}
         disabled={!selectedImages[selectedImagesIndex]}
       >
         Reset

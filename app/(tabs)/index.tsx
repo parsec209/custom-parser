@@ -22,7 +22,7 @@ export default function ScannerPage() {
         //disabled={!selectedImages[0] && !selectedImage2}
         onPress={() => {}}
       >
-        <Link href="../parsersModal">Select parser</Link>
+        <Link href="../parsers-modal">Select parser</Link>
       </Button>
     </View>
   );

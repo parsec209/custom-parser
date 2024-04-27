@@ -6,12 +6,12 @@ import { SelectedParserContext } from "../contexts/selectedParserContext";
 import { IsLoadingContext } from "../contexts/isLoadingContext";
 import { ParsersContext } from "../contexts/parsersContext";
 import { getAllImagesData } from "../services/postService";
-import { ParserSelections } from "../components/ParserSelections";
+import ParserSelections from "../components/ParserSelections";
 
 export default function ParsersModal() {
-  const [selectedParser, setSelectedParser] = useContext(SelectedParserContext); // as GamesContextType (example), type is defined in context file;
-  const [parsers, setParsers] = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
-  const [isLoading, setIsLoading] = useContext(IsLoadingContext);
+  const {selectedParser, setSelectedParser} = useContext(SelectedParserContext); // as GamesContextType (example), type is defined in context file;
+  const {parsers, setParsers} = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
+  const {isLoading, setIsLoading} = useContext(IsLoadingContext);
   const [imagesData, setImagesData] = useState([]);
 
   const scan = async () => {
@@ -51,7 +51,7 @@ export default function ParsersModal() {
         mode="contained"
         buttonColor="blue"
         onPress={scan}
-        disabled={!parsers.length || isLoading}
+        disabled={!parsers?.length || isLoading}
       >
         Start scan
       </Button>
