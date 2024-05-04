@@ -20,13 +20,14 @@ export default function ParserSelections() {
   const { parsers, setParsers } = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
   const { isLoading, setIsLoading } = useContext(IsLoadingContext);
 
+
   const getAndSetParsers = async () => {
     try {
       setIsLoading(true);
       const result = await getAllParsers();
       setParsers(result);
       setSelectedParser(
-        result?.length ? (selectedParser ? selectedParser : result[0]) : null,
+        result.length ? (selectedParser ? selectedParser : result[0]) : null,
       );
       setIsLoading(false);
     } catch (err) {
@@ -56,7 +57,9 @@ export default function ParserSelections() {
       await deleteParser(id);
       const updatedParsers = parsers.filter((parser) => parser.id != id);
       setParsers(updatedParsers);
-      setSelectedParser(null);
+      setSelectedParser(
+        parsers.length ? (selectedParser ? selectedParser : parsers[0]) : null,
+      );
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -107,7 +110,7 @@ export default function ParserSelections() {
         }}
         disabled={isLoading}
       />
-      <Text variant="labelMedium">{parser.name}</Text>
+      <Text variant="titleMedium">{parser.name}</Text>
     </View>
   ));
 
@@ -122,26 +125,27 @@ export default function ParserSelections() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, []);;
+
 
   return (
-    <View style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}>
+    <View style={{ opacity: isLoading ? 0.5 : 1 }}>
       <Text style={styles.title} variant="headlineMedium">
         Select a parser
       </Text>
       <View style={styles.parsersList}>{parsersList}</View>
       <Button icon="plus" mode="text" disabled={isLoading} onPress={() => {}}>
-        <Link href="./parser">Add new parser</Link>
+        <Link href="./parser-modal">Add new parser</Link>
       </Button>
-      {/* {parsers?.length && (
-        <>
+      {parsers?.length > 0 && (
+        <View>
           <Button
             icon="pencil-outline"
             mode="text"
             disabled={isLoading}
             onPress={() => {}}
           >
-            <Link href={`./parser?id=${selectedParser?.id}`}>
+            <Link href={`./parser-modal?id=${selectedParser?.id}`}>
               Edit selected parser
             </Link>
           </Button>
@@ -153,8 +157,8 @@ export default function ParserSelections() {
           >
             Delete selected parser
           </Button>
-        </>
-      )} */}
+        </View>
+      )}
       <Button
         mode="text"
         buttonColor="red"
@@ -176,11 +180,6 @@ export default function ParserSelections() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   title: {
     fontSize: 25,
     fontWeight: "bold",

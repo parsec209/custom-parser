@@ -4,76 +4,68 @@ const db = SQLite.openDatabase("db.db");
 
 export const createTables = async () => {
   await db.transactionAsync(async (tx) => {
-    const result1 = await tx.executeSqlAsync(
+    await tx.executeSqlAsync(
       "create table if not exists parsers (id integer primary key not null, name text unique, fields text, prompts text);",
       [],
     );
-    console.log("CREATED PARSERS TABLE: " + JSON.stringify(result1));
-    const result2 = await tx.executeSqlAsync(
+    console.log("CREATED PARSERS TABLE");
+    await tx.executeSqlAsync(
       "create table if not exists images_data (id integer primary key not null, name text unique, fields text, data text, parser_id integer, foreign key(parser_id) references parsers(id));",
       [],
     );
-    console.log("CREATED IMAGES_DATA TABLE: " + JSON.stringify(result2));
+    console.log("CREATED IMAGES_DATA TABLE");
   });
 };
 
 export const getAllParsers = async () => {
-  const result = await db.transactionAsync(async (tx) => {
-    const {
-      rows: { _array },
-    } = await tx.executeSqlAsync(
+  let result;
+  await db.transactionAsync(async (tx) => {
+    const { rows } = await tx.executeSqlAsync(
       "select * from parsers order by name asc;",
       [],
     );
-    console.log("GET ALL PARSERS: " + JSON.stringify(_array));
-    return _array;
+    result = rows;
+    console.log("GET ALL PARSERS: " + JSON.stringify(result));
   });
   return result;
 };
 
 export const getParser = async (id) => {
-  const result = await db.transactionAsync(async (tx) => {
-    const {
-      rows: { _array },
-    } = await tx.executeSqlAsync("select * from parsers where id = ?;", [id]);
-    console.log("GET ONE: " + JSON.stringify(_array));
-    const result = _array[0];
-    const fieldNames = JSON.parse(result.fields);
-    const row = JSON.parse(result.prompts);
-    const name = result.name;
-    return { name, fieldNames, row };
+  let result;
+  await db.transactionAsync(async (tx) => {
+    const { rows } = await tx.executeSqlAsync(
+      "select * from parsers where id = ?;",
+      [id],
+    );
+    result = rows;
+    console.log("GET ONE: " + JSON.stringify(result));
   });
   return result;
 };
-// setName(_array[0].name);
-// setFieldNames(parsedFields);
-// setRows([parsedPrompts]);
 
-export const postParser = async (name, fieldNames, row) => {
+export const postParser = async (name, fieldNames, rows) => {
   await db.transactionAsync(async (tx) => {
     const stringifiedFieldNames = JSON.stringify(fieldNames);
-    const stringifiedRow = JSON.stringify(row);
+    const stringifiedRows = JSON.stringify(rows);
     const result = await tx.executeSqlAsync(
       "insert into parsers (name, fields, prompts) values (?, ?, ?)",
-      [name, stringifiedFieldNames, stringifiedRow],
+      [name, stringifiedFieldNames, stringifiedRows],
     );
     console.log("POSTED: " + JSON.stringify(result));
   });
 };
-//router.replace("./parsers");
 
-export const updateParser = async (name, fieldNames, row, id) => {
+export const updateParser = async (name, fieldNames, rows, id) => {
   await db.transactionAsync(async (tx) => {
     const stringifiedFieldNames = JSON.stringify(fieldNames);
-    const stringifiedRow = JSON.stringify(row);
+    const stringifiedRows = JSON.stringify(rows);
     const result = await tx.executeSqlAsync(
       `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
-      [name, stringifiedFieldNames, stringifiedRow, id],
+      [name, stringifiedFieldNames, stringifiedRows, id],
     );
     console.log("UPDATED: " + JSON.stringify(result));
   });
 };
-//router.replace("./parsers");
 
 export const deleteParser = async (id) => {
   await db.transactionAsync(async (tx) => {
@@ -120,9 +112,21 @@ export const dropAll = async () => {
       );
       console.log("DROPPED TABLE images_data: " + JSON.stringify(result2));
     });
+
+    await db.transactionAsync(async (tx) => {
+      const result3 = await tx.executeSqlAsync(
+        "create table if not exists parsers (id integer primary key not null, name text unique, fields text, prompts text);",
+        [],
+      );
+      console.log("CREATED PARSERS TABLE: " + JSON.stringify(result3));
+      const result4 = await tx.executeSqlAsync(
+        "create table if not exists images_data (id integer primary key not null, name text unique, fields text, data text, parser_id integer, foreign key(parser_id) references parsers(id));",
+        [],
+      );
+      console.log("CREATED IMAGES_DATA TABLE: " + JSON.stringify(result4));
+    });
   } catch (err) {
     alert(err);
     console.error(err);
   }
 };
-

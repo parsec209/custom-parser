@@ -19,7 +19,6 @@ import {
 import { getParser, updateParser, postParser } from "../services/postService";
 import { IsLoadingContext } from "../contexts/isLoadingContext";
 
-
 export default function ParserModal() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
@@ -34,11 +33,9 @@ export default function ParserModal() {
   const [itemsPerPage, onItemsPerPageChange] = useState(
     numberOfItemsPerPageList[0],
   );
-  const [validations, setValidations] = useState(null); //null || { nameIsValid, fieldNamesAreValid, rowsAreValid }
+  const [isValidated, setIsValidated] = useState(false);
   const [modalText, setModalText] = useState("");
-  const {isLoading, setIsLoading} = useContext(IsLoadingContext);
-
-
+  const { isLoading, setIsLoading } = useContext(IsLoadingContext);
 
   const from = page * itemsPerPage;
   const to = Math.min((page + 1) * itemsPerPage, rows.length);
@@ -51,25 +48,51 @@ export default function ParserModal() {
   //   }, 5000); // Delay of 5 seconds
   // };
 
-  const getAndSetValidations = () => {
-    const nameIsValid = Boolean(name);
-    const fieldNamesAreValid = Boolean(!fieldNames.includes(""));
-    const rowsAreValid = Boolean(!rows.some((row) => row.includes("")));
-    setValidations({ nameIsValid, fieldNamesAreValid, rowsAreValid });
+  const arefieldNamesValid = () => {
+    return !fieldNames.includes("");
   };
 
-  const postParserAndRedirect = async () => {
-    setIsLoading(true);
-    await postParser(name, fieldNames, rows[0]);
-    setIsLoading(false);
-    router.replace("./parsers-modal");
+  const areRowsValid = () => {
+    return !rows.some((row) => row.includes(""));
   };
 
-  const updateParserAndRedirect = async () => {
-    setIsLoading(true);
-    await updateParser(name, fieldNames, rows[0], id);
-    setIsLoading(false);
-    router.replace("./parsers-modal");
+  const saveData = async () => {
+    try {
+      setIsLoading(true);
+      //delayedFunction();
+      if (name && arefieldNamesValid() && areRowsValid()) {
+        id
+          ? await updateParser(name, fieldNames, rows, id)
+          : await postParser(name, fieldNames, rows);
+        setIsLoading(false);
+        router.back();
+      }
+      setIsValidated(true);
+      setIsLoading(false);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+      setIsLoading(false);
+    }
+  };
+
+  const getAndSetParserTextFields = async () => {
+    try {
+      setIsLoading(true);
+      const result = await getParser(id);
+      const parser = result[0];
+      const parserFieldNames = JSON.parse(parser.fields);
+      const parserRows = JSON.parse(parser.prompts);
+      const parserName = parser.name;
+      setName(parserName);
+      setFieldNames(parserFieldNames);
+      setRows(parserRows);
+      setIsLoading(false);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+      setIsLoading(false);
+    }
   };
 
   const updateFieldNameText = (fieldNameIndex, text) => {
@@ -140,18 +163,7 @@ export default function ParserModal() {
         return;
       }
       if (id) {
-        try {
-          setIsLoading(true);
-          const { name, fieldNames, row } = await getParser(id);
-          setName(name);
-          setFieldNames(fieldNames);
-          setRows([row]);
-          setIsLoading(false);
-        } catch (err) {
-          alert(err);
-          console.error(err);
-          setIsLoading(false);
-        }
+        await getAndSetParserTextFields();
       }
     })();
     return () => {
@@ -170,10 +182,12 @@ export default function ParserModal() {
           style={styles.nameInput}
           value={name}
           placeholder="Enter a name for this parser"
-          onChangeText={(name) => setName(name)}
+          onChangeText={(name) => {
+            setName(name);
+          }}
           disabled={isLoading}
         />
-        {validations && !validations.nameIsValid && (
+        {isValidated && !name && (
           <Text variant="bodySmall" style={styles.invalidField}>
             Parser name is required.
           </Text>
@@ -186,7 +200,7 @@ export default function ParserModal() {
           onPress={addColumn}
           disabled={isLoading}
         >
-          Add field
+          Add column
         </Button>
         <Button
           icon="minus"
@@ -218,12 +232,11 @@ export default function ParserModal() {
       </View>
       <View style={styles.tableTitleContainer}>
         <Text variant="titleMedium">Parser table</Text>
-        {validations &&
-          (!validations.fieldNamesAreValid || !validations.rowsAreValid) && (
-            <Text variant="bodySmall" style={styles.invalidField}>
-              Please fill out any red-highlighted table fields.
-            </Text>
-          )}
+        {isValidated && (!arefieldNamesValid() || !areRowsValid()) && (
+          <Text variant="bodySmall" style={styles.invalidField}>
+            Please fill out any red-highlighted table fields.
+          </Text>
+        )}
       </View>
       <View>
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
@@ -253,52 +266,51 @@ export default function ParserModal() {
 
           <View style={styles.table}>
             <View style={styles.row}>
-              {fieldNames &&
-                fieldNames.map((fieldName, fieldNameIndex) => (
-                  <View key={fieldNameIndex} style={styles.cell}>
-                    <Button
-                      mode="text"
-                      disabled={isLoading}
-                      onPress={() => {
-                        setModalFieldNameIndex(fieldNameIndex);
-                        setModalText(fieldName);
+              {fieldNames?.map((fieldName, fieldNameIndex) => (
+                <View key={fieldNameIndex} style={styles.cell}>
+                  <Button
+                    mode="text"
+                    disabled={isLoading}
+                    onPress={() => {
+                      setModalFieldNameIndex(fieldNameIndex);
+                      setModalText(fieldName);
+                    }}
+                    labelStyle={{
+                      textDecorationLine: "underline",
+                      color: !isValidated || fieldName ? "blue" : "red",
+                    }}
+                  >
+                    {fieldName
+                      ? fieldName.length > 20
+                        ? fieldName.substring(0, 20) + "..."
+                        : fieldName
+                      : "Field name"}
+                  </Button>
+                  <Portal>
+                    <Modal
+                      visible={modalFieldNameIndex === fieldNameIndex}
+                      onDismiss={() => {
+                        setModalFieldNameIndex(null);
+                        updateFieldNameText(fieldNameIndex, modalText);
                       }}
-                      labelStyle={{
-                        textDecorationLine: "underline",
-                        color: !validations || fieldName ? "blue" : "red",
-                      }}
+                      contentContainerStyle={styles.modal}
                     >
-                      {fieldName
-                        ? fieldName.length > 20
-                          ? fieldName.substring(0, 20) + "..."
-                          : fieldName
-                        : "Field name"}
-                    </Button>
-                    <Portal>
-                      <Modal
-                        visible={modalFieldNameIndex === fieldNameIndex}
-                        onDismiss={() => {
-                          setModalFieldNameIndex(null);
-                          updateFieldNameText(fieldNameIndex, modalText);
+                      <TextInput
+                        label={"Field name"}
+                        value={modalText}
+                        onChangeText={(text) => {
+                          setModalText(text);
                         }}
-                        contentContainerStyle={styles.modal}
-                      >
-                        <TextInput
-                          label={"Field name"}
-                          value={modalText}
-                          onChangeText={(text) => {
-                            setModalText(text);
-                          }}
-                        />
-                      </Modal>
-                    </Portal>
-                  </View>
-                ))}
+                      />
+                    </Modal>
+                  </Portal>
+                </View>
+              ))}
             </View>
 
-            {rows.slice(from, to).map((row, rowIndex) => (
+            {rows?.slice(from, to).map((row, rowIndex) => (
               <View key={rowIndex} style={styles.row}>
-                {row.map((prompt, cellIndex) => (
+                {row?.map((prompt, cellIndex) => (
                   <View key={cellIndex} style={styles.cell}>
                     <Button
                       mode="text"
@@ -309,7 +321,7 @@ export default function ParserModal() {
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
-                        color: !validations || prompt ? "blue" : "red",
+                        color: !isValidated || prompt ? "blue" : "red",
                       }}
                     >
                       {prompt
@@ -363,14 +375,7 @@ export default function ParserModal() {
           mode="contained"
           style={styles.saveButton}
           disabled={isLoading}
-          onPress={() => {
-            setIsLoading(true);
-            //delayedFunction();
-            getAndSetValidations();
-            !Object.values(validations).includes(false) &&
-              (id ? updateParserAndRedirect() : postParserAndRedirect());
-            setIsLoading(false);
-          }}
+          onPress={saveData}
           buttonColor="blue"
         >
           Save

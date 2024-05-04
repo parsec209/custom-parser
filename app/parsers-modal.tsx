@@ -9,9 +9,11 @@ import { getAllImagesData } from "../services/postService";
 import ParserSelections from "../components/ParserSelections";
 
 export default function ParsersModal() {
-  const {selectedParser, setSelectedParser} = useContext(SelectedParserContext); // as GamesContextType (example), type is defined in context file;
-  const {parsers, setParsers} = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
-  const {isLoading, setIsLoading} = useContext(IsLoadingContext);
+  const { selectedParser, setSelectedParser } = useContext(
+    SelectedParserContext,
+  ); // as GamesContextType (example), type is defined in context file;
+  const { parsers, setParsers } = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
+  const { isLoading, setIsLoading } = useContext(IsLoadingContext);
   const [imagesData, setImagesData] = useState([]);
 
   const scan = async () => {
@@ -42,19 +44,24 @@ export default function ParsersModal() {
     //   }
   };
 
+
+
+  
   return (
     <View style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}>
-      <ParserSelections />
-      <Button
-        style={styles.scanButton}
-        icon="scan-helper"
-        mode="contained"
-        buttonColor="blue"
-        onPress={scan}
-        disabled={!parsers?.length || isLoading}
-      >
-        Start scan
-      </Button>
+      <View>
+        <ParserSelections />
+        <Button
+          // style={styles.scanButton}
+          icon="scan-helper"
+          mode="contained"
+          buttonColor="blue"
+          onPress={scan}
+          disabled={!(parsers?.length > 0) || isLoading}
+        >
+          Start scan
+        </Button>
+      </View>
     </View>
   );
 }
@@ -65,7 +72,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  scanButton: {
-    marginVertical: 20,
-  },
+  // scanButton: {
+  //   marginVertical: 20,
+  // },
 });
