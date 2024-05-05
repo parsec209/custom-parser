@@ -7,11 +7,7 @@ import { PaperProvider } from "react-native-paper";
 
 import { SelectedImagesProvider } from "../contexts/selectedImagesContext";
 import { ParsersProvider } from "../contexts/parsersContext";
-import { SelectedParserProvider } from "../contexts/selectedParserContext";
-import { IsLoadingProvider } from "../contexts/isLoadingContext";
 import { createTables } from "../services/postService";
-
-
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -29,7 +25,6 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [selectedImages, setSelectedImages] = useState([null, null]);
   const [parsers, setParsers] = useState([]);
-  const [selectedParser, setSelectedParser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [loaded, error] = useFonts({
@@ -87,31 +82,17 @@ export default function RootLayout() {
             setParsers,
           }}
         >
-          <SelectedParserProvider
-            value={{
-              selectedParser,
-              setSelectedParser,
-            }}
-          >
-          <IsLoadingProvider
-            value={{
-              isLoading,
-              setIsLoading,
-            }}
-          >
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="parsers-modal"
-                options={{ presentation: "modal", title: "Parser selection" }}
-              />
-              <Stack.Screen
-                name="parser-modal"
-                options={{ presentation: "modal", title: "Parser setup" }}
-              />
-            </Stack>
-            </IsLoadingProvider>
-          </SelectedParserProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="parsers-modal"
+              options={{ presentation: "modal", title: "Parser selection" }}
+            />
+            <Stack.Screen
+              name="parser-modal"
+              options={{ presentation: "modal", title: "Parser setup" }}
+            />
+          </Stack>
         </ParsersProvider>
       </SelectedImagesProvider>
     </PaperProvider>

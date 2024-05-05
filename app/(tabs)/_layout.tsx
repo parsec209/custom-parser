@@ -15,6 +15,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="parsers"
+        options={{
+          title: "Parsers",
+          tabBarIcon: ({ color }) => (
+            <Icon source="cog-outline" color={color} size={20} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="tables"
         options={{
           title: "Tables",

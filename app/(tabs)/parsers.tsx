@@ -1,8 +1,8 @@
 import { StyleSheet, View } from "react-native";
 
-import ParserSelections from "../components/ParserSelections";
+import ParserSelections from "../../components/ParserSelections";
 
-export default function ParsersModal() {
+export default function ParsersTab() {
   return (
     <View style={styles.container}>
       <ParserSelections />

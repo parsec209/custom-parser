@@ -1,25 +1,54 @@
-import { useContext, useEffect } from "react";
+import { useEffect, useState, useContext } from "react";
 import { StyleSheet, View, Alert } from "react-native";
 import { Text, Button, RadioButton } from "react-native-paper";
 import { Link } from "expo-router";
+import { usePathname } from "expo-router";
 
-import { SelectedParserContext } from "../contexts/selectedParserContext";
-import { IsLoadingContext } from "../contexts/isLoadingContext";
 import { ParsersContext } from "../contexts/parsersContext";
 import {
   getAllParsers,
   deleteAll,
   dropAll,
   deleteParser,
+  getAllImagesData,
 } from "../services/postService";
 
 export default function ParserSelections() {
-  const { selectedParser, setSelectedParser } = useContext(
-    SelectedParserContext,
-  ); // as GamesContextType (example), type is defined in context file;
-  const { parsers, setParsers } = useContext(ParsersContext); // as GamesContextType (example), type is defined in context file;
-  const { isLoading, setIsLoading } = useContext(IsLoadingContext);
+  const currentPath = usePathname();
+  //console.log(currentPath);
 
+  const { parsers, setParsers } = useContext(ParsersContext);
+  const [selectedParser, setSelectedParser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imagesData, setImagesData] = useState([]);
+
+  const scan = async () => {
+    //   try {
+    // const result = await getAllImagesData();
+    // setImagesData(result);
+    //     const imageData = imagesData.filter((imageData) => imageData.parser_id === checked);
+    //     const parser = parsers.filter((parser) => parser.id === checked);
+    //     //send stringified parsers.rows[0] to backend
+    //     //backend returns stringified array of string values
+    //     const values = []
+    //     const newTableRow = [];
+    //     const tableFieldNames = table.fields
+    //     for (let i = 0; i < values.length; i++) {
+    //       let value = values[i]
+    //       for (let j = 0; j < tableFieldNames.length; j++) {
+    //         let tableFieldName = tableFieldNames[j]
+    //         if (condition) {
+    //           const element = array[index];
+    //           const element = array[index];
+    //         }
+    //       }
+    //       for
+    //     }
+    //   } catch (err) {
+    //     alert(err);
+    //     console.error(err);
+    //   }
+  };
 
   const getAndSetParsers = async () => {
     try {
@@ -125,8 +154,7 @@ export default function ParserSelections() {
     return () => {
       isMounted = false;
     };
-  }, []);;
-
+  }, []);
 
   return (
     <View style={{ opacity: isLoading ? 0.5 : 1 }}>
@@ -134,9 +162,6 @@ export default function ParserSelections() {
         Select a parser
       </Text>
       <View style={styles.parsersList}>{parsersList}</View>
-      <Button icon="plus" mode="text" disabled={isLoading} onPress={() => {}}>
-        <Link href="./parser-modal">Add new parser</Link>
-      </Button>
       {parsers?.length > 0 && (
         <View>
           <Button
@@ -145,7 +170,17 @@ export default function ParserSelections() {
             disabled={isLoading}
             onPress={() => {}}
           >
-            <Link href={`./parser-modal?id=${selectedParser?.id}`}>
+            <Link
+              href={{
+                pathname:
+                  currentPath === "/parsers-modal"
+                    ? `./parser-modal`
+                    : `../parser-modal`,
+                params: {
+                  id: selectedParser?.id,
+                },
+              }}
+            >
               Edit selected parser
             </Link>
           </Button>
@@ -159,6 +194,23 @@ export default function ParserSelections() {
           </Button>
         </View>
       )}
+      <Button icon="plus" mode="text" disabled={isLoading} onPress={() => {}}>
+        <Link
+          href={{
+            pathname:
+              currentPath === "/parsers-modal"
+                ? "./parser-modal"
+                : "../parser-modal",
+            // params: {
+            //   routerPath:
+            //     currentPath === "/parsers-modal" ? "./parsers-modal" : "../parsers-modal",
+            // },
+          }}
+        >
+          Add new parser
+        </Link>
+      </Button>
+
       <Button
         mode="text"
         buttonColor="red"
@@ -175,6 +227,18 @@ export default function ParserSelections() {
       >
         Drop All SQL Tables
       </Button>
+      {currentPath === "hi" && (
+        <Button
+          style={styles.scanButton}
+          icon="scan-helper"
+          mode="contained"
+          buttonColor="blue"
+          onPress={scan}
+          disabled={!(parsers?.length > 0) || isLoading}
+        >
+          Start scan
+        </Button>
+      )}
     </View>
   );
 }
@@ -190,5 +254,8 @@ const styles = StyleSheet.create({
   },
   parserSelection: {
     flexDirection: "row",
+  },
+  scanButton: {
+    marginVertical: 20,
   },
 });

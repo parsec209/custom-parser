@@ -55,17 +55,73 @@ export const postParser = async (name, fieldNames, rows) => {
   });
 };
 
-export const updateParser = async (name, fieldNames, rows, id) => {
-  await db.transactionAsync(async (tx) => {
+// export const updateParser = async (name, fieldNames, rows, id) => {
+//   try {
+//     await db.transactionAsync(async (tx) => {
+//       const stringifiedFieldNames = JSON.stringify(fieldNames);
+//       const stringifiedRows = JSON.stringify(rows);
+//       try {
+//         const result = await tx.executeSqlAsync(
+//           `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
+//           [name, stringifiedFieldNames, stringifiedRows, id],
+//         );
+//         console.log("UPDATED: " + JSON.stringify(result));
+//       } catch (err) {
+//         return true;
+//       }
+//     });
+//   } catch (err) {
+//     return true;
+//   }
+// };
+
+export const updateParser = (name, fieldNames, rows, id) => {
+  db.transaction((tx) => {
     const stringifiedFieldNames = JSON.stringify(fieldNames);
     const stringifiedRows = JSON.stringify(rows);
-    const result = await tx.executeSqlAsync(
+    tx.executeSql(
       `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
       [name, stringifiedFieldNames, stringifiedRows, id],
+      (_, result) => {
+        console.log("UPDATED:x` " + JSON.stringify(result));
+      },
+      (_, err) => {
+        console.error(err);
+        return true;
+      },
     );
-    console.log("UPDATED: " + JSON.stringify(result));
   });
 };
+
+db.transaction((tx) => {
+  tx.executeSql(
+    "select * from parsers order by name asc;",
+    [],
+    (_, { rows: { _array } }) => {
+      console.log("GET ALL PARSERS: " + JSON.stringify(_array));
+      setParsers(_array);
+      setChecked(_array.length ? _array[0].name : null);
+      tx.executeSql(
+        "select * from tables",
+        [],
+        (_, { rows: { _array } }) => {
+          console.log("GET ALL TABLES: " + JSON.stringify(_array));
+          setTables(_array);
+        },
+        (_, err) => {
+          alert(err);
+          console.error(err);
+          return true;
+        },
+      );
+    },
+    (_, err) => {
+      alert(err);
+      console.error(err);
+      return true;
+    },
+  );
+});
 
 export const deleteParser = async (id) => {
   await db.transactionAsync(async (tx) => {

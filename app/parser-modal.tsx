@@ -16,12 +16,22 @@ import {
   Modal,
   TextInput,
 } from "react-native-paper";
-import { getParser, updateParser, postParser } from "../services/postService";
-import { IsLoadingContext } from "../contexts/isLoadingContext";
+import {
+  getAllParsers,
+  getParser,
+  updateParser,
+  postParser,
+} from "../services/postService";
+import { ParsersContext } from "../contexts/parsersContext";
 
 export default function ParserModal() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id } = useLocalSearchParams<{
+    id?: string;
+    //routerPath: string;
+  }>();
   const router = useRouter();
+
+  const { parsers, setParsers } = useContext(ParsersContext);
 
   const [name, setName] = useState("");
   const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
@@ -35,7 +45,7 @@ export default function ParserModal() {
   );
   const [isValidated, setIsValidated] = useState(false);
   const [modalText, setModalText] = useState("");
-  const { isLoading, setIsLoading } = useContext(IsLoadingContext);
+  const [isLoading, setIsLoading] = useState(false);
 
   const from = page * itemsPerPage;
   const to = Math.min((page + 1) * itemsPerPage, rows.length);
@@ -57,21 +67,25 @@ export default function ParserModal() {
   };
 
   const saveData = async () => {
-    try {
-      setIsLoading(true);
-      //delayedFunction();
-      if (name && arefieldNamesValid() && areRowsValid()) {
+    setIsLoading(true);
+    //delayedFunction();
+    if (name && arefieldNamesValid() && areRowsValid()) {
+      try {
         id
           ? await updateParser(name, fieldNames, rows, id)
           : await postParser(name, fieldNames, rows);
+        const updatedParsers = await getAllParsers();
+        setParsers(updatedParsers);
         setIsLoading(false);
+        //router.navigate(routerPath);
         router.back();
+      } catch (err) {
+        alert(err);
+        console.error(err);
+        setIsLoading(false);
       }
+    } else {
       setIsValidated(true);
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
       setIsLoading(false);
     }
   };

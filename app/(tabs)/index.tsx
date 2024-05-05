@@ -4,7 +4,7 @@ import { Link } from "expo-router";
 
 import ImageSelection from "../../components/ImageSelection";
 
-export default function ScannerPage() {
+export default function ScannerTab() {
   return (
     <View style={styles.container}>
       <Text variant="bodyMedium">Select up to two images per scan.</Text>
