@@ -7,6 +7,7 @@ import { PaperProvider } from "react-native-paper";
 
 import { SelectedImagesProvider } from "../contexts/selectedImagesContext";
 import { ParsersProvider } from "../contexts/parsersContext";
+import { SelectedParserProvider } from "../contexts/selectedParserContext";
 import { createTables } from "../services/postService";
 
 export {
@@ -25,6 +26,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [selectedImages, setSelectedImages] = useState([null, null]);
   const [parsers, setParsers] = useState([]);
+  const [selectedParser, setSelectedParser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [loaded, error] = useFonts({
@@ -82,17 +84,24 @@ export default function RootLayout() {
             setParsers,
           }}
         >
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="parsers-modal"
-              options={{ presentation: "modal", title: "Parser selection" }}
-            />
-            <Stack.Screen
-              name="parser-modal"
-              options={{ presentation: "modal", title: "Parser setup" }}
-            />
-          </Stack>
+          <SelectedParserProvider
+            value={{
+              selectedParser,
+              setSelectedParser,
+            }}
+          >
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="parsers-modal"
+                options={{ presentation: "modal", title: "Parser selection" }}
+              />
+              <Stack.Screen
+                name="parser-modal"
+                options={{ presentation: "modal", title: "Parser setup" }}
+              />
+            </Stack>
+          </SelectedParserProvider>
         </ParsersProvider>
       </SelectedImagesProvider>
     </PaperProvider>

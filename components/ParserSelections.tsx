@@ -5,6 +5,7 @@ import { Link } from "expo-router";
 import { usePathname } from "expo-router";
 
 import { ParsersContext } from "../contexts/parsersContext";
+import { SelectedParserContext } from "../contexts/selectedParserContext";
 import {
   getAllParsers,
   deleteAll,
@@ -18,36 +19,37 @@ export default function ParserSelections() {
   //console.log(currentPath);
 
   const { parsers, setParsers } = useContext(ParsersContext);
-  const [selectedParser, setSelectedParser] = useState(null);
+  const { selectedParser, setSelectedParser } = useContext(
+    SelectedParserContext,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [imagesData, setImagesData] = useState([]);
 
   const scan = async () => {
-    //   try {
-    // const result = await getAllImagesData();
-    // setImagesData(result);
-    //     const imageData = imagesData.filter((imageData) => imageData.parser_id === checked);
-    //     const parser = parsers.filter((parser) => parser.id === checked);
-    //     //send stringified parsers.rows[0] to backend
-    //     //backend returns stringified array of string values
-    //     const values = []
-    //     const newTableRow = [];
-    //     const tableFieldNames = table.fields
-    //     for (let i = 0; i < values.length; i++) {
-    //       let value = values[i]
-    //       for (let j = 0; j < tableFieldNames.length; j++) {
-    //         let tableFieldName = tableFieldNames[j]
-    //         if (condition) {
-    //           const element = array[index];
-    //           const element = array[index];
-    //         }
-    //       }
-    //       for
-    //     }
-    //   } catch (err) {
-    //     alert(err);
-    //     console.error(err);
-    //   }
+      try {
+    const result = await getAllImagesData();
+    setImagesData(result);
+        const imageData = imagesData.filter((imageData) => imageData.parser_id === selectedParser.id;
+        //send stringified parser.prompts[0] to backend
+        //backend returns stringified array of string values
+        const values = []
+        const newTableRow = [];
+        const tableFieldNames = table.fields
+        for (let i = 0; i < values.length; i++) {
+          let value = values[i]
+          for (let j = 0; j < tableFieldNames.length; j++) {
+            let tableFieldName = tableFieldNames[j]
+            if (condition) {
+              const element = array[index];
+              const element = array[index];
+            }
+          }
+          for
+        }
+      } catch (err) {
+        alert(err);
+        console.error(err);
+      }
   };
 
   const getAndSetParsers = async () => {
@@ -86,9 +88,7 @@ export default function ParserSelections() {
       await deleteParser(id);
       const updatedParsers = parsers.filter((parser) => parser.id != id);
       setParsers(updatedParsers);
-      setSelectedParser(
-        parsers.length ? (selectedParser ? selectedParser : parsers[0]) : null,
-      );
+      setSelectedParser(parsers.length ? parsers[0] : null);
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -185,8 +185,8 @@ export default function ParserSelections() {
             </Link>
           </Button>
           <Button
+            icon="minus"
             mode="text"
-            buttonColor="red"
             onPress={createTwoButtonAlert}
             disabled={isLoading}
           >
@@ -227,7 +227,7 @@ export default function ParserSelections() {
       >
         Drop All SQL Tables
       </Button>
-      {currentPath === "hi" && (
+      {currentPath === "/parsers-modal" && (
         <Button
           style={styles.scanButton}
           icon="scan-helper"

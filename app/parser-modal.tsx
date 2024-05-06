@@ -23,6 +23,8 @@ import {
   postParser,
 } from "../services/postService";
 import { ParsersContext } from "../contexts/parsersContext";
+import { SelectedParserContext } from "../contexts/selectedParserContext";
+
 
 export default function ParserModal() {
   const { id } = useLocalSearchParams<{
@@ -32,6 +34,9 @@ export default function ParserModal() {
   const router = useRouter();
 
   const { parsers, setParsers } = useContext(ParsersContext);
+  const { selectedParser, setSelectedParser } = useContext(
+    SelectedParserContext,
+  );
 
   const [name, setName] = useState("");
   const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
@@ -75,7 +80,9 @@ export default function ParserModal() {
           ? await updateParser(name, fieldNames, rows, id)
           : await postParser(name, fieldNames, rows);
         const updatedParsers = await getAllParsers();
+        const updatedParserSelection = updatedParsers.find(parser => parser.name === name);
         setParsers(updatedParsers);
+        setSelectedParser(updatedParserSelection)
         setIsLoading(false);
         //router.navigate(routerPath);
         router.back();

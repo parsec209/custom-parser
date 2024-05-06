@@ -5,12 +5,12 @@ const db = SQLite.openDatabase("db.db");
 export const createTables = async () => {
   await db.transactionAsync(async (tx) => {
     await tx.executeSqlAsync(
-      "create table if not exists parsers (id integer primary key not null, name text unique, fields text, prompts text);",
+      "create table if not exists parsers (id integer primary key not null, name text not null, fields text not null, prompts text not null);",
       [],
     );
     console.log("CREATED PARSERS TABLE");
     await tx.executeSqlAsync(
-      "create table if not exists images_data (id integer primary key not null, name text unique, fields text, data text, parser_id integer, foreign key(parser_id) references parsers(id));",
+      "create table if not exists images_data (id integer primary key not null, name text not null, fields text not null, data text not null, parser_id integer, foreign key(parser_id) references parsers(id));",
       [],
     );
     console.log("CREATED IMAGES_DATA TABLE");
@@ -44,7 +44,26 @@ export const getParser = async (id) => {
 };
 
 export const postParser = async (name, fieldNames, rows) => {
+  if (
+    !(
+      name &&
+      typeof name === "string" &&
+      Array.isArray(fieldNames) &&
+      !fieldNames.includes("") &&
+      Array.isArray(rows) &&
+      !rows.some((row) => !Array.isArray(row) || row.includes(""))
+    )
+  ) {
+    throw new Error("Invalid data type");
+  }
   await db.transactionAsync(async (tx) => {
+    const names = await tx.executeSqlAsync(
+      "select * from parsers where name = ?",
+      [name],
+    );
+    if (names.rows.length) {
+      throw new Error("Parser name already exists");
+    }
     const stringifiedFieldNames = JSON.stringify(fieldNames);
     const stringifiedRows = JSON.stringify(rows);
     const result = await tx.executeSqlAsync(
@@ -55,73 +74,87 @@ export const postParser = async (name, fieldNames, rows) => {
   });
 };
 
-// export const updateParser = async (name, fieldNames, rows, id) => {
-//   try {
-//     await db.transactionAsync(async (tx) => {
-//       const stringifiedFieldNames = JSON.stringify(fieldNames);
-//       const stringifiedRows = JSON.stringify(rows);
-//       try {
-//         const result = await tx.executeSqlAsync(
-//           `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
-//           [name, stringifiedFieldNames, stringifiedRows, id],
-//         );
-//         console.log("UPDATED: " + JSON.stringify(result));
-//       } catch (err) {
-//         return true;
-//       }
-//     });
-//   } catch (err) {
-//     return true;
-//   }
-// };
-
-export const updateParser = (name, fieldNames, rows, id) => {
-  db.transaction((tx) => {
+export const updateParser = async (name, fieldNames, rows, id) => {
+  console.log(typeof id);
+  if (
+    !(
+      name &&
+      typeof name === "string" &&
+      Array.isArray(fieldNames) &&
+      !fieldNames.includes("") &&
+      Array.isArray(rows) &&
+      !rows.some((row) => !Array.isArray(row) || row.includes("")) &&
+      id &&
+      typeof id === "string"
+    )
+  ) {
+    throw new Error("Invalid data type");
+  }
+  await db.transactionAsync(async (tx) => {
+    const names = await tx.executeSqlAsync(
+      "select * from parsers where name = ? and id != ?;",
+      [name, id],
+    );
+    if (names.rows.length) {
+      throw new Error("Parser name already exists");
+    }
     const stringifiedFieldNames = JSON.stringify(fieldNames);
     const stringifiedRows = JSON.stringify(rows);
-    tx.executeSql(
+    const result = await tx.executeSqlAsync(
       `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
       [name, stringifiedFieldNames, stringifiedRows, id],
-      (_, result) => {
-        console.log("UPDATED:x` " + JSON.stringify(result));
-      },
-      (_, err) => {
-        console.error(err);
-        return true;
-      },
     );
+    console.log("UPDATED: " + JSON.stringify(result));
   });
 };
 
-db.transaction((tx) => {
-  tx.executeSql(
-    "select * from parsers order by name asc;",
-    [],
-    (_, { rows: { _array } }) => {
-      console.log("GET ALL PARSERS: " + JSON.stringify(_array));
-      setParsers(_array);
-      setChecked(_array.length ? _array[0].name : null);
-      tx.executeSql(
-        "select * from tables",
-        [],
-        (_, { rows: { _array } }) => {
-          console.log("GET ALL TABLES: " + JSON.stringify(_array));
-          setTables(_array);
-        },
-        (_, err) => {
-          alert(err);
-          console.error(err);
-          return true;
-        },
-      );
-    },
-    (_, err) => {
-      alert(err);
-      console.error(err);
-      return true;
-    },
-  );
-});
+// export const updateParser = (name, fieldNames, rows, id) => {
+//   db.transaction((tx) => {
+//     const stringifiedFieldNames = JSON.stringify(fieldNames);
+//     const stringifiedRows = JSON.stringify(rows);
+//     tx.executeSql(
+//       `update parsers set name = ?, fields = ?, prompts = ? where id = ?;`,
+//       [name, stringifiedFieldNames, stringifiedRows, id],
+//       (_, result) => {
+//         console.log("UPDATED:x` " + JSON.stringify(result));
+//       },
+//       (_, err) => {
+//         console.error(err);
+//         return true;
+//       },
+//     );
+//   });
+// };
+
+// db.transaction((tx) => {
+//   tx.executeSql(
+//     "select * from parsers order by name asc;",
+//     [],
+//     (_, { rows: { _array } }) => {
+//       console.log("GET ALL PARSERS: " + JSON.stringify(_array));
+//       setParsers(_array);
+//       setChecked(_array.length ? _array[0].name : null);
+//       tx.executeSql(
+//         "select * from tables",
+//         [],
+//         (_, { rows: { _array } }) => {
+//           console.log("GET ALL TABLES: " + JSON.stringify(_array));
+//           setTables(_array);
+//         },
+//         (_, err) => {
+//           alert(err);
+//           console.error(err);
+//           return true;
+//         },
+//       );
+//     },
+//     (_, err) => {
+//       alert(err);
+//       console.error(err);
+//       return true;
+//     },
+//   );
+// });
 
 export const deleteParser = async (id) => {
   await db.transactionAsync(async (tx) => {
