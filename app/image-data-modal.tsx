@@ -1,12 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  KeyboardAvoidingView,
-  StyleSheet,
-  View,
-  ScrollView,
-  Alert,
-} from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 
 import {
   Text,
@@ -16,41 +10,29 @@ import {
   Modal,
   TextInput,
 } from "react-native-paper";
-import {
-  getAllParsers,
-  getParser,
-  updateParser,
-  postParser,
-  postImageData,
-  updateImageData,
-} from "../services/postService";
-import { ParsersContext } from "../contexts/parsersContext";
-import { SelectedParserContext } from "../contexts/selectedParserContext";
+import { getAllImagesData, updateImageData } from "../services/postService";
+import { ImagesDataContext } from "../contexts/imagesDataContext";
 
-export default function ParserModal() {
-  const { id } = useLocalSearchParams<{
+export default function ImageDataModal() {
+  const { id, parserId } = useLocalSearchParams<{
     id?: string;
+    parserId?: string;
     //routerPath: string;
   }>();
   const router = useRouter();
 
-  const { parsers, setParsers } = useContext(ParsersContext);
-  const { selectedParser, setSelectedParser } = useContext(
-    SelectedParserContext,
-  );
+  const { setImagesData } = useContext(ImagesDataContext);
 
   const [name, setName] = useState("");
   const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
   const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [fieldNames, setFieldNames] = useState([""]);
-  const [rows, setRows] = useState([[""]]);
-  const [imageDataRows, setImageDataRows] = useState([]);
+  const [rows, setRows] = useState([]);
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
   const [itemsPerPage, onItemsPerPageChange] = useState(
     numberOfItemsPerPageList[0],
   );
-  const [isValidated, setIsValidated] = useState(false);
   const [modalText, setModalText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -65,58 +47,16 @@ export default function ParserModal() {
   //   }, 5000); // Delay of 5 seconds
   // };
 
-  const arefieldNamesValid = () => {
-    return !fieldNames.includes("");
-  };
-
-  const areRowsValid = () => {
-    return !rows.some((row) => row.includes(""));
-  };
-
   const saveData = async () => {
     setIsLoading(true);
     //delayedFunction();
-    if (name && arefieldNamesValid() && areRowsValid()) {
-      try {
-        if (id) {
-          await updateParser(name, fieldNames, rows, id);
-          await updateImageData(name, fieldNames, imageDataRows, id, true);
-        } else {
-          await postParser(name, fieldNames, rows);
-          await postImageData(name, fieldNames, [], id);
-          const updatedParsers = await getAllParsers();
-          const updatedParserSelection = updatedParsers.find(
-            (parser) => parser.name === name,
-          );
-          setParsers(updatedParsers);
-          setSelectedParser(updatedParserSelection);
-        }
-        setIsLoading(false);
-        //router.navigate(routerPath);
-        router.back();
-      } catch (err) {
-        alert(err);
-        console.error(err);
-        setIsLoading(false);
-      }
-    } else {
-      setIsValidated(true);
-      setIsLoading(false);
-    }
-  };
-
-  const getAndSetParserTextFields = async () => {
     try {
-      setIsLoading(true);
-      const result = await getParser(id);
-      const parser = result[0];
-      const parserFieldNames = JSON.parse(parser.fields);
-      const parserRows = JSON.parse(parser.prompts);
-      const parserName = parser.name;
-      setName(parserName);
-      setFieldNames(parserFieldNames);
-      setRows(parserRows);
+      await updateImageData(name, fieldNames, rows, id);
+      const updatedImagesData = await getAllImagesData();
+      setImagesData(updatedImagesData);
       setIsLoading(false);
+      //router.navigate(routerPath);
+      router.back();
     } catch (err) {
       alert(err);
       console.error(err);
@@ -124,13 +64,17 @@ export default function ParserModal() {
     }
   };
 
-  const getAndSetImageData = async () => {
+  const getAndSetImageDataTextFields = async () => {
     try {
       setIsLoading(true);
-      const result = await getImageData(id, true);
+      const result = id ? await getImageData(id) : getImageData(parserId, true);
       const imageData = result[0];
-      const data = JSON.parse(imageData.data);
-      setImageDataRows(data);
+      const imageDataFieldNames = JSON.parse(imageData.fields);
+      const imageDataRows = JSON.parse(imageData.data);
+      const imageDataName = imageData.name;
+      setName(imageDataName);
+      setFieldNames(imageDataFieldNames);
+      setRows(imageDataRows);
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -139,56 +83,10 @@ export default function ParserModal() {
     }
   };
 
-  const updateFieldNameText = (fieldNameIndex, text) => {
-    const updatedFieldNames = [...fieldNames];
-    updatedFieldNames[fieldNameIndex] = text;
-    setFieldNames(updatedFieldNames);
-  };
-
-  const updatePrompt = (rowIndex, cellIndex, text) => {
+  const updateCell = (rowIndex, cellIndex, text) => {
     const updatedRows = [...rows];
     updatedRows[rowIndex][cellIndex] = text;
     setRows(updatedRows);
-  };
-
-  const addColumn = () => {
-    const updatedFieldNames = [...fieldNames, ""];
-    const updatedRows = rows.map((row) => {
-      return [...row, ""];
-    });
-    const updatedImageDataRows = rows.map((row) => {
-      return [...row, ""];
-    });
-    setFieldNames(updatedFieldNames);
-    setRows(updatedRows);
-    setImageDataRows(updatedImageDataRows);
-  };
-
-  const resetFields = () => {
-    setFieldNames([""]);
-    setRows([[""]]);
-    setPage(0);
-  };
-
-  const deleteColumn = () => {
-    let updatedFieldNames = [...fieldNames];
-    let updatedRows = rows.map((row) => {
-      row.pop();
-      return row;
-    });
-    let updatedImageDataRows = rows.map((row) => {
-      row.pop();
-      return row;
-    });
-    updatedFieldNames.pop();
-    if (!updatedFieldNames.length) {
-      updatedFieldNames = [""];
-      updatedRows = [[""]];
-      updatedImageDataRows = [];
-    }
-    setFieldNames(updatedFieldNames);
-    setRows(updatedRows);
-    setImageDataRows(updatedImageDataRows);
   };
 
   const addRow = () => {
@@ -206,6 +104,11 @@ export default function ParserModal() {
     setRows(updatedRows);
   };
 
+  const resetRows = () => {
+    setRows([]);
+    setPage(0);
+  };
+
   useEffect(() => {
     setPage(0);
   }, [itemsPerPage]);
@@ -217,7 +120,7 @@ export default function ParserModal() {
         return;
       }
       if (id) {
-        await getAndSetParserTextFields();
+        await getAndSetImageDataTextFields();
       }
     })();
     return () => {
@@ -226,44 +129,14 @@ export default function ParserModal() {
   }, []);
 
   return (
-    <KeyboardAvoidingView
-      behavior="height"
-      style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}
-    >
-      <View style={styles.nameContainer}>
-        <TextInput
-          label="Parser name"
-          style={styles.nameInput}
-          value={name}
-          placeholder="Enter a name for this parser"
-          onChangeText={(name) => {
-            setName(name);
-          }}
-          disabled={isLoading}
-        />
-        {isValidated && !name && (
-          <Text variant="bodySmall" style={styles.invalidField}>
-            Parser name is required.
-          </Text>
-        )}
-      </View>
+    <View style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}>
+      <TextInput
+        label="Image category name"
+        style={styles.nameInput}
+        value={name}
+        disabled={true}
+      />
       <View style={styles.tableButtonContainer}>
-        <Button
-          icon="plus"
-          mode="text"
-          onPress={addColumn}
-          disabled={isLoading}
-        >
-          Add column
-        </Button>
-        <Button
-          icon="minus"
-          mode="text"
-          onPress={deleteColumn}
-          disabled={isLoading}
-        >
-          Delete column
-        </Button>
         <Button icon="plus" mode="text" onPress={addRow} disabled={isLoading}>
           Add row
         </Button>
@@ -278,20 +151,15 @@ export default function ParserModal() {
         <Button
           icon="refresh"
           mode="text"
-          onPress={resetFields}
+          onPress={resetRows}
           disabled={isLoading}
         >
           Reset
         </Button>
       </View>
-      <View style={styles.tableTitleContainer}>
-        <Text variant="titleMedium">Parser table</Text>
-        {isValidated && (!arefieldNamesValid() || !areRowsValid()) && (
-          <Text variant="bodySmall" style={styles.invalidField}>
-            Please fill out any red-highlighted table fields.
-          </Text>
-        )}
-      </View>
+      <Text style={styles.tableTitle} variant="titleMedium">
+        Image data table
+      </Text>
       <View>
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
           <View style={styles.table}>
@@ -307,30 +175,25 @@ export default function ParserModal() {
                     }}
                     labelStyle={{
                       textDecorationLine: "underline",
-                      color: !isValidated || fieldName ? "blue" : "red",
+                      color: "blue",
                     }}
                   >
-                    {fieldName
-                      ? fieldName.length > 20
-                        ? fieldName.substring(0, 20) + "..."
-                        : fieldName
-                      : "Field name"}
+                    {fieldName?.length > 20
+                      ? fieldName.substring(0, 20) + "..."
+                      : fieldName}
                   </Button>
                   <Portal>
                     <Modal
                       visible={modalFieldNameIndex === fieldNameIndex}
                       onDismiss={() => {
                         setModalFieldNameIndex(null);
-                        updateFieldNameText(fieldNameIndex, modalText);
                       }}
                       contentContainerStyle={styles.modal}
                     >
                       <TextInput
                         label={"Field name"}
                         value={modalText}
-                        onChangeText={(text) => {
-                          setModalText(text);
-                        }}
+                        disabled={true}
                       />
                     </Modal>
                   </Portal>
@@ -340,25 +203,23 @@ export default function ParserModal() {
 
             {rows?.slice(from, to).map((row, rowIndex) => (
               <View key={rowIndex} style={styles.row}>
-                {row?.map((prompt, cellIndex) => (
+                {row?.map((cellData, cellIndex) => (
                   <View key={cellIndex} style={styles.cell}>
                     <Button
                       mode="text"
                       disabled={isLoading}
                       onPress={() => {
                         setModalFieldDataIndex({ rowIndex, cellIndex });
-                        setModalText(prompt);
+                        setModalText(cellData);
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
-                        color: !isValidated || prompt ? "blue" : "red",
+                        color: "blue",
                       }}
                     >
-                      {prompt
-                        ? prompt.length > 20
-                          ? prompt.substring(0, 20) + "..."
-                          : prompt
-                        : "Field value prompt"}
+                      {cellData?.length > 20
+                        ? cellData.substring(0, 20) + "..."
+                        : cellData}
                     </Button>
                     <Portal>
                       <Modal
@@ -369,12 +230,12 @@ export default function ParserModal() {
                         }
                         onDismiss={() => {
                           setModalFieldDataIndex(null);
-                          updatePrompt(rowIndex, cellIndex, modalText);
+                          updateCell(rowIndex, cellIndex, modalText);
                         }}
                         contentContainerStyle={styles.modal}
                       >
                         <TextInput
-                          label={"Field value prompt"}
+                          label={"Cell value"}
                           value={modalText}
                           onChangeText={(text) => setModalText(text)}
                         />
@@ -411,44 +272,18 @@ export default function ParserModal() {
           Save
         </Button>
       </View>
-      <Button
-        labelStyle={{
-          textDecorationLine: "underline",
-          color: "blue",
-        }}
-        mode="text"
-        disabled={isLoading}
-        onPress={() => {}}
-      >
-        <Link
-          href={{
-            pathname: `./image-data-modal`,
-            params: {
-              parserId: selectedParser?.id,
-            },
-          }}
-        >
-          View parser's scanned data
-        </Link>
-      </Button>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
-//not all of these are under an element's "style" property, make sure they still work!!
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    //paddingLeft: 16,
-    //paddingRight: 16,
-  },
-  nameContainer: {
-    alignItems: "center",
-    marginBottom: 20,
   },
   nameInput: {
     width: "80%",
+    marginBottom: 20,
   },
   tableButtonContainer: {
     alignItems: "flex-start",
@@ -459,23 +294,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     marginBottom: 10,
     paddingHorizontal: 16,
-    //width: 300,
-    // justifyContent: "center",
-  },
-  scrollViewContainer: {
-    //width: 300,
   },
   modal: {
     backgroundColor: "white",
     padding: 20,
     marginHorizontal: 16,
   },
-  tableTitleContainer: {
-    alignItems: "center",
+  tableTitle: {
     marginBottom: 10,
-  },
-  invalidField: {
-    color: "red",
   },
   table: {
     backgroundColor: "white",
@@ -490,7 +316,6 @@ const styles = StyleSheet.create({
   },
   cell: {
     flex: 1,
-    // padding: 8,
     width: 175,
     borderRightWidth: 1,
     borderColor: "grey",

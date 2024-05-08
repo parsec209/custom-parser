@@ -6,12 +6,15 @@ import { usePathname } from "expo-router";
 
 import { ParsersContext } from "../contexts/parsersContext";
 import { SelectedParserContext } from "../contexts/selectedParserContext";
+import { SelectedImagesContext } from "../contexts/selectedImagesContext";
 import {
   getAllParsers,
   deleteAll,
   dropAll,
   deleteParser,
-  getAllImagesData,
+  getImageData,
+  updateImageData,
+  // getAllImagesData,
 } from "../services/postService";
 
 export default function ParserSelections() {
@@ -22,34 +25,32 @@ export default function ParserSelections() {
   const { selectedParser, setSelectedParser } = useContext(
     SelectedParserContext,
   );
+  const { selectedImages } = useContext(SelectedImagesContext);
   const [isLoading, setIsLoading] = useState(false);
-  const [imagesData, setImagesData] = useState([]);
+  // const [imagesData, setImagesData] = useState([]);
 
   const scan = async () => {
-      try {
-    const result = await getAllImagesData();
-    setImagesData(result);
-        const imageData = imagesData.filter((imageData) => imageData.parser_id === selectedParser.id;
-        //send stringified parser.prompts[0] to backend
-        //backend returns stringified array of string values
-        const values = []
-        const newTableRow = [];
-        const tableFieldNames = table.fields
-        for (let i = 0; i < values.length; i++) {
-          let value = values[i]
-          for (let j = 0; j < tableFieldNames.length; j++) {
-            let tableFieldName = tableFieldNames[j]
-            if (condition) {
-              const element = array[index];
-              const element = array[index];
-            }
-          }
-          for
-        }
-      } catch (err) {
-        alert(err);
-        console.error(err);
-      }
+    try {
+      //send stringified selectedParser.prompts[0], and selected images, to backend
+      //backend returns stringified array of string values
+      const rawValues = []; //JSON.parse
+      const values = rawValues.map((value) =>
+        typeof value !== "string" ? "" : value,
+      ); // only for testing, allow null and undefined for cell values
+      const result = await getImageData(selectedParser.id, true);
+      const imageData = result[0];
+      const imageDataUpdatedRows = imageData.data.push(values);
+      await updateImageData(
+        imageData.name,
+        imageData.fields,
+        imageDataUpdatedRows,
+        imageData.id,
+      );
+      router.replace(`./table-modal?id=${imageData.id}`);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+    }
   };
 
   const getAndSetParsers = async () => {

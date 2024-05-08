@@ -8,6 +8,8 @@ import { PaperProvider } from "react-native-paper";
 import { SelectedImagesProvider } from "../contexts/selectedImagesContext";
 import { ParsersProvider } from "../contexts/parsersContext";
 import { SelectedParserProvider } from "../contexts/selectedParserContext";
+import { SelectedTableProvider } from "../contexts/selectedImageDataContext";
+import { ImagesDataProvider } from "../contexts/imagesDataContext";
 import { createTables } from "../services/postService";
 
 export {
@@ -27,6 +29,8 @@ export default function RootLayout() {
   const [selectedImages, setSelectedImages] = useState([null, null]);
   const [parsers, setParsers] = useState([]);
   const [selectedParser, setSelectedParser] = useState(null);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [imagesData, setImagesData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const [loaded, error] = useFonts({
@@ -90,17 +94,37 @@ export default function RootLayout() {
               setSelectedParser,
             }}
           >
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="parsers-modal"
-                options={{ presentation: "modal", title: "Parser selection" }}
-              />
-              <Stack.Screen
-                name="parser-modal"
-                options={{ presentation: "modal", title: "Parser setup" }}
-              />
-            </Stack>
+            <SelectedTableProvider
+              value={{
+                selectedTable,
+                setSelectedTable,
+              }}
+            >
+              <ImagesDataProvider
+                value={{
+                  imagesData,
+                  setImagesData,
+                }}
+              >
+                <Stack>
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="parsers-modal"
+                    options={{
+                      presentation: "modal",
+                      title: "Parser selection",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="parser-modal"
+                    options={{ presentation: "modal", title: "Parser setup" }}
+                  />
+                </Stack>
+              </ImagesDataProvider>
+            </SelectedTableProvider>
           </SelectedParserProvider>
         </ParsersProvider>
       </SelectedImagesProvider>
