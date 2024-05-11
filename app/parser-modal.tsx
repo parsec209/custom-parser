@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import {
   KeyboardAvoidingView,
   StyleSheet,
@@ -18,7 +18,7 @@ import {
 } from "react-native-paper";
 import {
   getAllParsers,
-  getParser,
+  getParserByName,
   updateParser,
   postParser,
   postImageData,
@@ -83,14 +83,15 @@ export default function ParserModal() {
           await updateImageData(name, fieldNames, imageDataRows, id, true);
         } else {
           await postParser(name, fieldNames, rows);
-          await postImageData(name, fieldNames, [], id);
-          const updatedParsers = await getAllParsers();
-          const updatedParserSelection = updatedParsers.find(
-            (parser) => parser.name === name,
-          );
-          setParsers(updatedParsers);
-          setSelectedParser(updatedParserSelection);
+          const { id: parserId } = await getParserByName(name);
+          await postImageData(name, fieldNames, [], parserId.toString());
         }
+        const updatedParsers = await getAllParsers();
+        const updatedParserSelection = updatedParsers.find(
+          (parser) => parser.name === name,
+        );
+        setParsers(updatedParsers);
+        setSelectedParser(updatedParserSelection);
         setIsLoading(false);
         //router.navigate(routerPath);
         router.back();
@@ -108,8 +109,7 @@ export default function ParserModal() {
   const getAndSetParserTextFields = async () => {
     try {
       setIsLoading(true);
-      const result = await getParser(id);
-      const parser = result[0];
+      const parser = await getParser(id);
       const parserFieldNames = JSON.parse(parser.fields);
       const parserRows = JSON.parse(parser.prompts);
       const parserName = parser.name;
@@ -127,8 +127,7 @@ export default function ParserModal() {
   const getAndSetImageData = async () => {
     try {
       setIsLoading(true);
-      const result = await getImageData(id, true);
-      const imageData = result[0];
+      const imageData = await getImageData(id, true);
       const data = JSON.parse(imageData.data);
       setImageDataRows(data);
       setIsLoading(false);
@@ -232,10 +231,10 @@ export default function ParserModal() {
     >
       <View style={styles.nameContainer}>
         <TextInput
-          label="Parser name"
+          label="Image category"
           style={styles.nameInput}
           value={name}
-          placeholder="Enter a name for this parser"
+          placeholder="Enter the image category"
           onChangeText={(name) => {
             setName(name);
           }}
@@ -455,6 +454,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 16,
   },
+  tableTitleContainer: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
   scrollView: {
     flexGrow: 1,
     marginBottom: 10,
@@ -470,10 +473,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginHorizontal: 16,
   },
-  tableTitleContainer: {
-    alignItems: "center",
-    marginBottom: 10,
-  },
+
   invalidField: {
     color: "red",
   },

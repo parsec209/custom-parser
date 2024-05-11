@@ -3,9 +3,9 @@ import { StyleSheet, View } from "react-native";
 import { Text, Button, RadioButton } from "react-native-paper";
 import { Link } from "expo-router";
 
-import { SelectedImageDataContext } from "../contexts/selectedImageDataContext";
-import { ImagesDataContext } from "../contexts/imagesDataContext";
-import { getAllImagesData } from "../services/postService";
+import { SelectedImageDataContext } from "../../contexts/selectedImageDataContext";
+import { ImagesDataContext } from "../../contexts/imagesDataContext";
+import { getAllImagesData } from "../../services/postService";
 
 export default function ImageDataSelections() {
   const { imagesData, setImagesData } = useContext(ImagesDataContext);
@@ -112,3 +112,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
 });
+
+
+
+  

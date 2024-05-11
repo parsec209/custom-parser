@@ -9,8 +9,6 @@ import { SelectedParserContext } from "../contexts/selectedParserContext";
 import { SelectedImagesContext } from "../contexts/selectedImagesContext";
 import {
   getAllParsers,
-  deleteAll,
-  dropAll,
   deleteParser,
   getImageData,
   updateImageData,
@@ -31,14 +29,16 @@ export default function ParserSelections() {
 
   const scan = async () => {
     try {
-      //send stringified selectedParser.prompts[0], and selected images, to backend
+      //send inner array string subsection of selectedParser.prompts, and selectedImages, to backend
       //backend returns stringified array of string values
-      const rawValues = []; //JSON.parse
-      const values = rawValues.map((value) =>
+      const stringifiedValues  = `['a', 'b', 'c']`
+      // ['d', 'e', 'f']
+      // ['g', 'h', 'i']
+      const parsedValues = JSON.parse(stringifiedValues)
+      const values = parsedValues.map((value) =>
         typeof value !== "string" ? "" : value,
       ); // only for testing, allow null and undefined for cell values
-      const result = await getImageData(selectedParser.id, true);
-      const imageData = result[0];
+      const imageData = await getImageData(selectedParser.id, true);
       const imageDataUpdatedRows = imageData.data.push(values);
       await updateImageData(
         imageData.name,
@@ -69,19 +69,7 @@ export default function ParserSelections() {
     }
   };
 
-  const deleteAllAndSetParsers = async () => {
-    try {
-      setIsLoading(true);
-      await deleteAll();
-      setParsers([]);
-      setSelectedParser(null);
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
+
 
   const deleteOneAndSetParsers = async (id) => {
     try {
@@ -98,19 +86,7 @@ export default function ParserSelections() {
     }
   };
 
-  const dropAllDB = async () => {
-    try {
-      setIsLoading(true);
-      await dropAll();
-      setParsers([]);
-      setSelectedParser(null);
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
+
 
   const createTwoButtonAlert = () =>
     Alert.alert(
@@ -212,22 +188,7 @@ export default function ParserSelections() {
         </Link>
       </Button>
 
-      <Button
-        mode="text"
-        buttonColor="red"
-        onPress={deleteAllAndSetParsers}
-        disabled={!parsers?.length || isLoading}
-      >
-        Delete All Parsers
-      </Button>
-      <Button
-        mode="text"
-        buttonColor="red"
-        onPress={dropAllDB}
-        disabled={isLoading}
-      >
-        Drop All SQL Tables
-      </Button>
+
       {currentPath === "/parsers-modal" && (
         <Button
           style={styles.scanButton}

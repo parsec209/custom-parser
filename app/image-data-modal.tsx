@@ -10,7 +10,11 @@ import {
   Modal,
   TextInput,
 } from "react-native-paper";
-import { getAllImagesData, updateImageData } from "../services/postService";
+import {
+  getAllImagesData,
+  getImageData,
+  updateImageData,
+} from "../services/postService";
 import { ImagesDataContext } from "../contexts/imagesDataContext";
 
 export default function ImageDataModal() {
@@ -67,8 +71,9 @@ export default function ImageDataModal() {
   const getAndSetImageDataTextFields = async () => {
     try {
       setIsLoading(true);
-      const result = id ? await getImageData(id) : getImageData(parserId, true);
-      const imageData = result[0];
+      const imageData = id
+        ? await getImageData(id)
+        : getImageData(parserId, true);
       const imageDataFieldNames = JSON.parse(imageData.fields);
       const imageDataRows = JSON.parse(imageData.data);
       const imageDataName = imageData.name;
@@ -130,12 +135,15 @@ export default function ImageDataModal() {
 
   return (
     <View style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}>
-      <TextInput
-        label="Image category name"
-        style={styles.nameInput}
-        value={name}
-        disabled={true}
-      />
+      <View style={styles.nameContainer}>
+        <TextInput
+          label="Image category name"
+          style={styles.nameInput}
+          value={name}
+          disabled={true}
+        />
+      </View>
+
       <View style={styles.tableButtonContainer}>
         <Button icon="plus" mode="text" onPress={addRow} disabled={isLoading}>
           Add row
@@ -157,9 +165,9 @@ export default function ImageDataModal() {
           Reset
         </Button>
       </View>
-      <Text style={styles.tableTitle} variant="titleMedium">
-        Image data table
-      </Text>
+      <View style={styles.tableTitleContainer}>
+        <Text variant="titleMedium">Image data table</Text>
+      </View>
       <View>
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
           <View style={styles.table}>
@@ -281,14 +289,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
+  nameContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
   nameInput: {
     width: "80%",
-    marginBottom: 20,
   },
   tableButtonContainer: {
     alignItems: "flex-start",
     marginBottom: 10,
     marginLeft: 16,
+  },
+  tableTitleContainer: {
+    alignItems: "center",
+    marginBottom: 10,
   },
   scrollView: {
     flexGrow: 1,
@@ -299,9 +314,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 20,
     marginHorizontal: 16,
-  },
-  tableTitle: {
-    marginBottom: 10,
   },
   table: {
     backgroundColor: "white",

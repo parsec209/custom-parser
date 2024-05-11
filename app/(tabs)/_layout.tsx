@@ -24,7 +24,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="tables"
+        name="images-data"
         options={{
           title: "Tables",
           tabBarIcon: ({ color }) => (

@@ -8,7 +8,7 @@ import { PaperProvider } from "react-native-paper";
 import { SelectedImagesProvider } from "../contexts/selectedImagesContext";
 import { ParsersProvider } from "../contexts/parsersContext";
 import { SelectedParserProvider } from "../contexts/selectedParserContext";
-import { SelectedTableProvider } from "../contexts/selectedImageDataContext";
+import { SelectedImageDataProvider } from "../contexts/selectedImageDataContext";
 import { ImagesDataProvider } from "../contexts/imagesDataContext";
 import { createTables } from "../services/postService";
 
@@ -29,9 +29,8 @@ export default function RootLayout() {
   const [selectedImages, setSelectedImages] = useState([null, null]);
   const [parsers, setParsers] = useState([]);
   const [selectedParser, setSelectedParser] = useState(null);
-  const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedImageData, setSelectedImageData] = useState(null);
   const [imagesData, setImagesData] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -56,13 +55,10 @@ export default function RootLayout() {
         return;
       }
       try {
-        setIsLoading(true);
         await createTables();
-        setIsLoading(false);
       } catch (err) {
         alert(err);
         console.error(err);
-        setIsLoading(false);
       }
     })();
     return () => {
@@ -94,10 +90,10 @@ export default function RootLayout() {
               setSelectedParser,
             }}
           >
-            <SelectedTableProvider
+            <SelectedImageDataProvider
               value={{
-                selectedTable,
-                setSelectedTable,
+                selectedImageData,
+                setSelectedImageData,
               }}
             >
               <ImagesDataProvider
@@ -124,7 +120,7 @@ export default function RootLayout() {
                   />
                 </Stack>
               </ImagesDataProvider>
-            </SelectedTableProvider>
+            </SelectedImageDataProvider>
           </SelectedParserProvider>
         </ParsersProvider>
       </SelectedImagesProvider>
