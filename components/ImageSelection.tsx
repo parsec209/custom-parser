@@ -1,18 +1,26 @@
-import { useContext } from "react";
 import { View, Image, StyleSheet } from "react-native";
 import { Button, IconButton } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 
-import { SelectedImagesContext } from "../contexts/selectedImagesContext";
-
-export default function ImageSelection({ selectedImagesIndex }) {
-  const {selectedImages, setSelectedImages} = useContext(SelectedImagesContext); // as GamesContextType (example), type is defined in context file;
-
+export default function ImageSelection({ image, handleImageUpdate }) {
   const [status, requestPermission] = ImagePicker.useCameraPermissions();
 
   if (status === null) {
     requestPermission();
   }
+
+  const checkImage = async (uri) => {
+    try {
+      const info = await FileSystem.getInfoAsync(uri);
+      if (!info.exists) {
+        handleImageUpdate(null);
+      }
+    } catch (err) {
+      alert(err);
+      console.error(err);
+    }
+  };
 
   const pickImage = async () => {
     const { assets } = await ImagePicker.launchImageLibraryAsync({
@@ -21,7 +29,7 @@ export default function ImageSelection({ selectedImagesIndex }) {
     });
     return assets ? assets[0].uri : assets;
   };
-  
+
   const takePhoto = async () => {
     const pendingResult = await ImagePicker.getPendingResultAsync();
     if (pendingResult && pendingResult.length > 0) {
@@ -34,31 +42,26 @@ export default function ImageSelection({ selectedImagesIndex }) {
     return assets ? assets[0].uri : assets;
   };
 
-  const getAndSetSelectedImages = async (iconType) => {
-    let image = null;
+  const updateImage = async (iconType) => {
+    let imageUri = null;
     if (iconType === "camera") {
-      image = await takePhoto();
-    } else {
-      image = await pickImage();
+      imageUri = await takePhoto();
+    } else if (iconType === "upload") {
+      imageUri = await pickImage();
     }
-    const updatedSelectedImages = [...selectedImages];
-    updatedSelectedImages[selectedImagesIndex] = image;
-    setSelectedImages(updatedSelectedImages);
-  };
-
-  const resetImage = () => {
-    const updatedSelectedImages = [...selectedImages];
-    updatedSelectedImages[selectedImagesIndex] = null; //
-    setSelectedImages(updatedSelectedImages);
+    handleImageUpdate(imageUri);
   };
 
   return (
     <View>
       <View style={styles.imageContainer}>
-        {selectedImages[selectedImagesIndex] ? (
+        {image ? (
           <Image
-            source={{ uri: selectedImages[selectedImagesIndex] }}
+            source={{ uri: image }}
             style={styles.image}
+            onLoad={() => {
+              checkImage(image);
+            }}
           />
         ) : (
           <View style={styles.imageSelectorIconsContainer}>
@@ -66,28 +69,22 @@ export default function ImageSelection({ selectedImagesIndex }) {
               icon="camera"
               iconColor="black"
               size={40}
-              onPress={() =>
-                getAndSetSelectedImages("camera")
-              }
+              onPress={() => updateImage("camera")}
             />
             <IconButton
               icon="upload"
               iconColor="black"
               size={40}
-              onPress={() =>
-                getAndSetSelectedImages("upload")
-              }
+              onPress={() => updateImage("upload")}
             />
           </View>
         )}
       </View>
       <Button
         mode="text"
-        style={
-          selectedImages[selectedImagesIndex] ? { opacity: 1 } : { opacity: 0 }
-        }
-        onPress={() => resetImage()}
-        disabled={!selectedImages[selectedImagesIndex]}
+        style={image ? { opacity: 1 } : { opacity: 0 }}
+        onPress={updateImage}
+        disabled={!image}
       >
         Reset
       </Button>

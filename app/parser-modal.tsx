@@ -1,12 +1,11 @@
-import { useState, useEffect, useContext } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState, useEffect } from "react";
 import {
   KeyboardAvoidingView,
   StyleSheet,
   View,
   ScrollView,
-  Alert,
 } from "react-native";
+import { useLocalSearchParams, useRouter, Link } from "expo-router";
 
 import {
   Text,
@@ -17,34 +16,27 @@ import {
   TextInput,
 } from "react-native-paper";
 import {
-  getAllParsers,
   getParser,
   updateParser,
   postParser,
+  getImageData,
   postImageData,
   updateImageData,
 } from "../services/postService";
-import { ParsersContext } from "../contexts/parsersContext";
-import { SelectedParserContext } from "../contexts/selectedParserContext";
 
 export default function ParserModal() {
-  const { id } = useLocalSearchParams<{
-    id?: string;
-    //routerPath: string;
+  const { parserId } = useLocalSearchParams<{
+    parserId?: string;
   }>();
   const router = useRouter();
-
-  const { parsers, setParsers } = useContext(ParsersContext);
-  const { selectedParser, setSelectedParser } = useContext(
-    SelectedParserContext,
-  );
 
   const [name, setName] = useState("");
   const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
   const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([[""]]);
-  const [imageDataRows, setImageDataRows] = useState([]);
+  const [imageDataRows, setImageDataRows] = useState([]);  //ONLY EDITED WHEN DELETING COLUMN
+  const [images, setImages] = useState([]);  //ONLY EDITED WHEN DELETING LAST REMAINING COLUMN
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
   const [itemsPerPage, onItemsPerPageChange] = useState(
@@ -65,6 +57,26 @@ export default function ParserModal() {
   //   }, 5000); // Delay of 5 seconds
   // };
 
+
+
+  const getAndSetParserTextFields = async () => {
+    try {
+      setIsLoading(true);
+      const parser = await getParser({ parserId });
+      const imageData = await getImageData({parserId});
+      setName(parser.name);
+      setFieldNames(parser.fieldNames);
+      setRows(parser.parserRows);
+      setImageDataRows(imageData.imageDataRows);
+      setImages(imageData.images)
+      setIsLoading(false);
+    } catch (err) {
+      alert(err);
+      console.error(err);
+      setIsLoading(false);
+    }
+  };
+
   const arefieldNamesValid = () => {
     return !fieldNames.includes("");
   };
@@ -78,21 +90,16 @@ export default function ParserModal() {
     //delayedFunction();
     if (name && arefieldNamesValid() && areRowsValid()) {
       try {
-        if (id) {
-          await updateParser(name, fieldNames, rows, id);
-          await updateImageData(name, fieldNames, imageDataRows, id, true);
+        if (parserId) {
+          await updateParser({ name, fieldNames, parserRows: rows, parserId });
+          await updateImageData({name, fieldNames, imageDataRows, images, parserId});
+          //add function for updating locally stored images
         } else {
-          await postParser(name, fieldNames, rows);
-          await postImageData(name, fieldNames, [], id);
-          const updatedParsers = await getAllParsers();
-          const updatedParserSelection = updatedParsers.find(
-            (parser) => parser.name === name,
-          );
-          setParsers(updatedParsers);
-          setSelectedParser(updatedParserSelection);
+          await postParser({ name, fieldNames, parserRows: rows  });
+          const { parserId } = await getParser({ name });
+          await postImageData({ name, fieldNames, imageDataRows: [], images: [], parserId });
         }
         setIsLoading(false);
-        //router.navigate(routerPath);
         router.back();
       } catch (err) {
         alert(err);
@@ -101,40 +108,6 @@ export default function ParserModal() {
       }
     } else {
       setIsValidated(true);
-      setIsLoading(false);
-    }
-  };
-
-  const getAndSetParserTextFields = async () => {
-    try {
-      setIsLoading(true);
-      const result = await getParser(id);
-      const parser = result[0];
-      const parserFieldNames = JSON.parse(parser.fields);
-      const parserRows = JSON.parse(parser.prompts);
-      const parserName = parser.name;
-      setName(parserName);
-      setFieldNames(parserFieldNames);
-      setRows(parserRows);
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
-
-  const getAndSetImageData = async () => {
-    try {
-      setIsLoading(true);
-      const result = await getImageData(id, true);
-      const imageData = result[0];
-      const data = JSON.parse(imageData.data);
-      setImageDataRows(data);
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
       setIsLoading(false);
     }
   };
@@ -156,7 +129,7 @@ export default function ParserModal() {
     const updatedRows = rows.map((row) => {
       return [...row, ""];
     });
-    const updatedImageDataRows = rows.map((row) => {
+    const updatedImageDataRows = imageDataRows.map((row) => {
       return [...row, ""];
     });
     setFieldNames(updatedFieldNames);
@@ -164,46 +137,30 @@ export default function ParserModal() {
     setImageDataRows(updatedImageDataRows);
   };
 
-  const resetFields = () => {
-    setFieldNames([""]);
-    setRows([[""]]);
-    setPage(0);
-  };
-
+//ADD WARNING ABOUT DELETING ANY COLUMN, AND ESPECIALLY THE ONLY REMAINING COLUMN (WHICH WILL DELETE THE STORED IMAGE TOO)
   const deleteColumn = () => {
     let updatedFieldNames = [...fieldNames];
+    updatedFieldNames.pop();
     let updatedRows = rows.map((row) => {
       row.pop();
       return row;
     });
-    let updatedImageDataRows = rows.map((row) => {
+    let updatedImageDataRows = imageDataRows.map((row) => {
       row.pop();
       return row;
     });
-    updatedFieldNames.pop();
+    let updatedImages = [...images]
     if (!updatedFieldNames.length) {
       updatedFieldNames = [""];
       updatedRows = [[""]];
       updatedImageDataRows = [];
+      updatedImages = [];
+      //Add function to delete all stored images for table
     }
     setFieldNames(updatedFieldNames);
     setRows(updatedRows);
     setImageDataRows(updatedImageDataRows);
-  };
-
-  const addRow = () => {
-    const updatedRows = [...rows];
-    const newRow = updatedRows[0].map(() => {
-      return "";
-    });
-    updatedRows.push(newRow);
-    setRows(updatedRows);
-  };
-
-  const deleteRow = () => {
-    const updatedRows = [...rows];
-    updatedRows.pop();
-    setRows(updatedRows);
+    setImages(updatedImages);
   };
 
   useEffect(() => {
@@ -216,7 +173,7 @@ export default function ParserModal() {
       if (!isMounted) {
         return;
       }
-      if (id) {
+      if (parserId) {
         await getAndSetParserTextFields();
       }
     })();
@@ -232,10 +189,10 @@ export default function ParserModal() {
     >
       <View style={styles.nameContainer}>
         <TextInput
-          label="Parser name"
+          label="Image category"
           style={styles.nameInput}
           value={name}
-          placeholder="Enter a name for this parser"
+          placeholder="Enter image category"
           onChangeText={(name) => {
             setName(name);
           }}
@@ -243,7 +200,7 @@ export default function ParserModal() {
         />
         {isValidated && !name && (
           <Text variant="bodySmall" style={styles.invalidField}>
-            Parser name is required.
+            Parser image category is required.
           </Text>
         )}
       </View>
@@ -264,31 +221,12 @@ export default function ParserModal() {
         >
           Delete column
         </Button>
-        <Button icon="plus" mode="text" onPress={addRow} disabled={isLoading}>
-          Add row
-        </Button>
-        <Button
-          icon="minus"
-          mode="text"
-          onPress={deleteRow}
-          disabled={isLoading}
-        >
-          Delete row
-        </Button>
-        <Button
-          icon="refresh"
-          mode="text"
-          onPress={resetFields}
-          disabled={isLoading}
-        >
-          Reset
-        </Button>
       </View>
       <View style={styles.tableTitleContainer}>
         <Text variant="titleMedium">Parser table</Text>
         {isValidated && (!arefieldNamesValid() || !areRowsValid()) && (
           <Text variant="bodySmall" style={styles.invalidField}>
-            Please fill out any red-highlighted table fields.
+            Please fill out any table fields that are in red.
           </Text>
         )}
       </View>
@@ -411,37 +349,36 @@ export default function ParserModal() {
           Save
         </Button>
       </View>
-      <Button
-        labelStyle={{
-          textDecorationLine: "underline",
-          color: "blue",
-        }}
-        mode="text"
-        disabled={isLoading}
-        onPress={() => {}}
-      >
-        <Link
-          href={{
-            pathname: `./image-data-modal`,
-            params: {
-              parserId: selectedParser?.id,
-            },
+      {parserId && (
+        <Button
+          labelStyle={{
+            textDecorationLine: "underline",
+            color: "blue",
           }}
+          mode="text"
+          disabled={isLoading}
+          onPress={() => {}}
         >
-          View parser's scanned data
-        </Link>
-      </Button>
+          <Link
+            href={{
+              pathname: `./image-data-modal`,
+              params: {
+                parserId,
+              },
+            }}
+          >
+            View parser's scanned data
+          </Link>
+        </Button>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
-//not all of these are under an element's "style" property, make sure they still work!!
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    //paddingLeft: 16,
-    //paddingRight: 16,
   },
   nameContainer: {
     alignItems: "center",
@@ -455,25 +392,21 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 16,
   },
+  tableTitleContainer: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
   scrollView: {
     flexGrow: 1,
     marginBottom: 10,
     paddingHorizontal: 16,
-    //width: 300,
-    // justifyContent: "center",
-  },
-  scrollViewContainer: {
-    //width: 300,
   },
   modal: {
     backgroundColor: "white",
     padding: 20,
     marginHorizontal: 16,
   },
-  tableTitleContainer: {
-    alignItems: "center",
-    marginBottom: 10,
-  },
+
   invalidField: {
     color: "red",
   },
@@ -490,7 +423,6 @@ const styles = StyleSheet.create({
   },
   cell: {
     flex: 1,
-    // padding: 8,
     width: 175,
     borderRightWidth: 1,
     borderColor: "grey",

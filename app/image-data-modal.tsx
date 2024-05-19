@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, View, ScrollView } from "react-native";
 
@@ -10,24 +10,25 @@ import {
   Modal,
   TextInput,
 } from "react-native-paper";
-import { getAllImagesData, updateImageData } from "../services/postService";
-import { ImagesDataContext } from "../contexts/imagesDataContext";
+import { getImageData, updateImageData } from "../services/postService";
+import ImageSelection from "../components/ImageSelection";
 
 export default function ImageDataModal() {
-  const { id, parserId } = useLocalSearchParams<{
-    id?: string;
+  const { imageDataId, parserId } = useLocalSearchParams<{
+    imageDataId?: string;
     parserId?: string;
-    //routerPath: string;
   }>();
   const router = useRouter();
-
-  const { setImagesData } = useContext(ImagesDataContext);
 
   const [name, setName] = useState("");
   const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
   const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
+  const [modalRowIndex, setModalRowIndex] = useState(null); //string or null
   const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([]);
+  const [images, setImages] = useState([]); // [[null || string, null || string]
+  const [image1, setImage1] = useState(null);
+  const [image2, setImage2] = useState(null);
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
   const [itemsPerPage, onItemsPerPageChange] = useState(
@@ -47,15 +48,29 @@ export default function ImageDataModal() {
   //   }, 5000); // Delay of 5 seconds
   // };
 
+  const updateRowImages = (rowIndex) => {
+    const updatedImages = [...images];
+    updatedImages[rowIndex][0] = image1;
+    updatedImages[rowIndex][1] = image2;
+    setImages(updatedImages);
+    setImage1(null);
+    setImage2(null);
+  };
+
+  const handleImage1Update = (imageUri) => {
+    setImage1(imageUri);
+  };
+
+  const handleImage2Update = (imageUri) => {
+    setImage2(imageUri);
+  };
+
   const saveData = async () => {
     setIsLoading(true);
     //delayedFunction();
     try {
-      await updateImageData(name, fieldNames, rows, id);
-      const updatedImagesData = await getAllImagesData();
-      setImagesData(updatedImagesData);
+      await updateImageData({ fieldNames, imageDataRows: rows, images, imageDataId, parserId });
       setIsLoading(false);
-      //router.navigate(routerPath);
       router.back();
     } catch (err) {
       alert(err);
@@ -64,17 +79,14 @@ export default function ImageDataModal() {
     }
   };
 
-  const getAndSetImageDataTextFields = async () => {
+  const getAndSetImageDataFields = async () => {
     try {
       setIsLoading(true);
-      const result = id ? await getImageData(id) : getImageData(parserId, true);
-      const imageData = result[0];
-      const imageDataFieldNames = JSON.parse(imageData.fields);
-      const imageDataRows = JSON.parse(imageData.data);
-      const imageDataName = imageData.name;
-      setName(imageDataName);
-      setFieldNames(imageDataFieldNames);
-      setRows(imageDataRows);
+      const imageData = await getImageData({ imageDataId, parserId });
+      setName(imageData.name);
+      setFieldNames(imageData.fieldNames);
+      setRows(imageData.imageDataRows);
+      setImages(imageData.images);
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -91,21 +103,29 @@ export default function ImageDataModal() {
 
   const addRow = () => {
     const updatedRows = [...rows];
-    const newRow = updatedRows[0].map(() => {
+    const updatedImages = [...images];
+    const newRow = fieldNames.map(() => {
       return "";
     });
+    const newImagePair = [null, null];
     updatedRows.push(newRow);
+    updatedImages.push(newImagePair);
     setRows(updatedRows);
+    setImages(updatedImages);
   };
 
   const deleteRow = () => {
     const updatedRows = [...rows];
+    const updatedImages = [...images];
     updatedRows.pop();
+    updatedImages.pop();
     setRows(updatedRows);
+    setImages(updatedImages);
   };
 
   const resetRows = () => {
     setRows([]);
+    setImages([]);
     setPage(0);
   };
 
@@ -119,9 +139,7 @@ export default function ImageDataModal() {
       if (!isMounted) {
         return;
       }
-      if (id) {
-        await getAndSetImageDataTextFields();
-      }
+      await getAndSetImageDataFields();
     })();
     return () => {
       isMounted = false;
@@ -130,12 +148,14 @@ export default function ImageDataModal() {
 
   return (
     <View style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}>
-      <TextInput
-        label="Image category name"
-        style={styles.nameInput}
-        value={name}
-        disabled={true}
-      />
+      <View style={styles.nameContainer}>
+        <TextInput
+          label="Image category"
+          style={styles.nameInput}
+          value={name}
+          disabled={true}
+        />
+      </View>
       <View style={styles.tableButtonContainer}>
         <Button icon="plus" mode="text" onPress={addRow} disabled={isLoading}>
           Add row
@@ -154,16 +174,19 @@ export default function ImageDataModal() {
           onPress={resetRows}
           disabled={isLoading}
         >
-          Reset
+          Reset rows
         </Button>
       </View>
-      <Text style={styles.tableTitle} variant="titleMedium">
-        Image data table
-      </Text>
+      <View style={styles.tableTitleContainer}>
+        <Text variant="titleMedium">Scanned image table</Text>
+      </View>
       <View>
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
           <View style={styles.table}>
             <View style={styles.row}>
+              <View style={styles.cell}>
+                <Text variant="bodySmall">Image link</Text>
+              </View>
               {fieldNames?.map((fieldName, fieldNameIndex) => (
                 <View key={fieldNameIndex} style={styles.cell}>
                   <Button
@@ -200,51 +223,114 @@ export default function ImageDataModal() {
                 </View>
               ))}
             </View>
+            {rows?.length === 0 ? (
+              <View style={styles.row}>
+                <View style={styles.cell}>
+                  <Text style={styles.emptyRowMsg}>No rows added yet</Text>
+                </View>
+                {fieldNames?.map((_, cellIndex) => (
+                  <View key={cellIndex} style={styles.cell}></View>
+                ))}
+              </View>
+            ) : (
+              rows?.slice(from, to).map((row, rowIndex) => (
+                //
+                //
+                //
 
-            {rows?.slice(from, to).map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.row}>
-                {row?.map((cellData, cellIndex) => (
-                  <View key={cellIndex} style={styles.cell}>
+                <View key={rowIndex} style={styles.row}>
+                  <View style={styles.cell}>
                     <Button
                       mode="text"
                       disabled={isLoading}
                       onPress={() => {
-                        setModalFieldDataIndex({ rowIndex, cellIndex });
-                        setModalText(cellData);
+                        setModalRowIndex(rowIndex);
+                        setImage1(images[rowIndex][0]);
+                        setImage2(images[rowIndex][1]);
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
                         color: "blue",
                       }}
                     >
-                      {cellData?.length > 20
-                        ? cellData.substring(0, 20) + "..."
-                        : cellData}
+                      {images?.length > 0 &&
+                      !images[rowIndex].some(
+                        (image) => typeof image === "string",
+                      )
+                        ? "Add image"
+                        : "View image"}
                     </Button>
                     <Portal>
                       <Modal
-                        visible={
-                          modalFieldDataIndex !== null &&
-                          modalFieldDataIndex.rowIndex === rowIndex &&
-                          modalFieldDataIndex.cellIndex === cellIndex
-                        }
+                        visible={modalRowIndex === rowIndex}
                         onDismiss={() => {
-                          setModalFieldDataIndex(null);
-                          updateCell(rowIndex, cellIndex, modalText);
+                          updateRowImages(rowIndex);
+                          setModalRowIndex(null);
                         }}
                         contentContainerStyle={styles.modal}
                       >
-                        <TextInput
-                          label={"Cell value"}
-                          value={modalText}
-                          onChangeText={(text) => setModalText(text)}
-                        />
+                        <View style={styles.imageSelections}>
+                          <ImageSelection
+                            image={image1}
+                            handleImageUpdate={handleImage1Update}
+                          />
+                          <ImageSelection
+                            image={image2}
+                            handleImageUpdate={handleImage2Update}
+                          />
+                        </View>
                       </Modal>
                     </Portal>
                   </View>
-                ))}
-              </View>
-            ))}
+                  {/*  */}
+                  {/*  */}
+                  {/*  */}
+
+                  {row?.map((cellData, cellIndex) => (
+                    <View key={cellIndex} style={styles.cell}>
+                      <Button
+                        mode="text"
+                        disabled={isLoading}
+                        onPress={() => {
+                          setModalFieldDataIndex({ rowIndex, cellIndex });
+                          setModalText(cellData);
+                        }}
+                        labelStyle={{
+                          textDecorationLine: "underline",
+                          color: "blue",
+                        }}
+                      >
+                        {cellData
+                          ? cellData.length > 20
+                            ? cellData.substring(0, 20) + "..."
+                            : cellData
+                          : "..."}
+                      </Button>
+                      <Portal>
+                        <Modal
+                          visible={
+                            modalFieldDataIndex !== null &&
+                            modalFieldDataIndex.rowIndex === rowIndex &&
+                            modalFieldDataIndex.cellIndex === cellIndex
+                          }
+                          onDismiss={() => {
+                            setModalFieldDataIndex(null);
+                            updateCell(rowIndex, cellIndex, modalText);
+                          }}
+                          contentContainerStyle={styles.modal}
+                        >
+                          <TextInput
+                            label={"Cell value"}
+                            value={modalText}
+                            onChangeText={(text) => setModalText(text)}
+                          />
+                        </Modal>
+                      </Portal>
+                    </View>
+                  ))}
+                </View>
+              ))
+            )}
           </View>
         </ScrollView>
 
@@ -281,14 +367,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
+  nameContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
   nameInput: {
     width: "80%",
-    marginBottom: 20,
   },
   tableButtonContainer: {
     alignItems: "flex-start",
     marginBottom: 10,
     marginLeft: 16,
+  },
+  tableTitleContainer: {
+    alignItems: "center",
+    marginBottom: 10,
   },
   scrollView: {
     flexGrow: 1,
@@ -300,14 +393,18 @@ const styles = StyleSheet.create({
     padding: 20,
     marginHorizontal: 16,
   },
-  tableTitle: {
-    marginBottom: 10,
-  },
   table: {
     backgroundColor: "white",
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderColor: "grey",
+  },
+  emptyRowMsg: {
+    marginVertical: 10,
+  },
+  imageSelections: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   row: {
     flexDirection: "row",
@@ -320,7 +417,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderColor: "grey",
     justifyContent: "center",
-    alignItems: "flex-start",
+    alignItems: "center",
   },
   pagination: {
     backgroundColor: "white",

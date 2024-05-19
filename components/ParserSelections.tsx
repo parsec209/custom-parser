@@ -1,87 +1,49 @@
-import { useEffect, useState, useContext } from "react";
+import { useState, useContext, useCallback } from "react";
 import { StyleSheet, View, Alert } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Text, Button, RadioButton } from "react-native-paper";
-import { Link } from "expo-router";
-import { usePathname } from "expo-router";
+import { Link, usePathname } from "expo-router";
 
-import { ParsersContext } from "../contexts/parsersContext";
-import { SelectedParserContext } from "../contexts/selectedParserContext";
 import { SelectedImagesContext } from "../contexts/selectedImagesContext";
-import {
-  getAllParsers,
-  deleteAll,
-  dropAll,
-  deleteParser,
-  getImageData,
-  updateImageData,
-  // getAllImagesData,
-} from "../services/postService";
+import { getAllParsers, deleteParser } from "../services/postService";
 
 export default function ParserSelections() {
   const currentPath = usePathname();
-  //console.log(currentPath);
 
-  const { parsers, setParsers } = useContext(ParsersContext);
-  const { selectedParser, setSelectedParser } = useContext(
-    SelectedParserContext,
-  );
   const { selectedImages } = useContext(SelectedImagesContext);
+
+  const [parsers, setParsers] = useState([]);
+  const [selectedParserIndex, setSelectedParserIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  // const [imagesData, setImagesData] = useState([]);
 
-  const scan = async () => {
-    try {
-      //send stringified selectedParser.prompts[0], and selected images, to backend
-      //backend returns stringified array of string values
-      const rawValues = []; //JSON.parse
-      const values = rawValues.map((value) =>
-        typeof value !== "string" ? "" : value,
-      ); // only for testing, allow null and undefined for cell values
-      const result = await getImageData(selectedParser.id, true);
-      const imageData = result[0];
-      const imageDataUpdatedRows = imageData.data.push(values);
-      await updateImageData(
-        imageData.name,
-        imageData.fields,
-        imageDataUpdatedRows,
-        imageData.id,
-      );
-      router.replace(`./table-modal?id=${imageData.id}`);
-    } catch (err) {
-      alert(err);
-      console.error(err);
-    }
-  };
-
-  const getAndSetParsers = async () => {
-    try {
-      setIsLoading(true);
-      const result = await getAllParsers();
-      setParsers(result);
-      setSelectedParser(
-        result.length ? (selectedParser ? selectedParser : result[0]) : null,
-      );
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
-
-  const deleteAllAndSetParsers = async () => {
-    try {
-      setIsLoading(true);
-      await deleteAll();
-      setParsers([]);
-      setSelectedParser(null);
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
+  //   const scan = async () => {
+  //     try {
+  //       //send inner array string subsection of selectedParser.prompts, and selectedImages, to backend
+  //       //backend returns stringified array of string values
+  //       const stringifiedValues = `['a', 'b', 'c']`;
+  //       // ['d', 'e', 'f']
+  //       // ['g', 'h', 'i']
+  //       const parsedValues = JSON.parse(stringifiedValues);
+  //       const values = parsedValues.map((value) =>
+  //         typeof value !== "string" ? "" : value,
+  //       ); // only for testing, allow null and undefined for cell values
+  //       const imageData = await getImageData(
+  //         { parserId: parsers[selectedParserIndex].id}
+  //       );
+  //       const imageDataUpdatedRows = imageData.data.push(values);
+  //       await updateImageData({
+  //         name: imageData.name,
+  //         fieldNames
+  // : imageData.fields,
+  // rows: imageDataUpdatedRows,
+  // id: imageData.id,
+  //     });
+  //       router.replace(`./table-modal?id=${imageData.id}`);
+  //     } catch (err) {
+  //       alert(err);
+  //       console.error(err);
+  //     }
+  //   };
 
   const deleteOneAndSetParsers = async (id) => {
     try {
@@ -89,21 +51,7 @@ export default function ParserSelections() {
       await deleteParser(id);
       const updatedParsers = parsers.filter((parser) => parser.id != id);
       setParsers(updatedParsers);
-      setSelectedParser(parsers.length ? parsers[0] : null);
-      setIsLoading(false);
-    } catch (err) {
-      alert(err);
-      console.error(err);
-      setIsLoading(false);
-    }
-  };
-
-  const dropAllDB = async () => {
-    try {
-      setIsLoading(true);
-      await dropAll();
-      setParsers([]);
-      setSelectedParser(null);
+      setSelectedParserIndex(0);
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -115,7 +63,7 @@ export default function ParserSelections() {
   const createTwoButtonAlert = () =>
     Alert.alert(
       "Warning",
-      `This will also permanently delete this parser's scanned image data table. Please check out the data export options first. If you still want to proceed with deletion, click OK.`,
+      `This will also permanently delete this parser's image data table. Please check out the data export options first. If you still want to proceed with deletion, click OK.`,
       [
         {
           text: "Cancel",
@@ -124,19 +72,23 @@ export default function ParserSelections() {
         {
           text: "OK",
           onPress: () => {
-            deleteOneAndSetParsers(selectedParser.id);
+            deleteOneAndSetParsers(parsers[selectedParserIndex].id);
           },
         },
       ],
     );
 
-  const parsersList = parsers?.map((parser) => (
+  const parsersList = parsers?.map((parser, index) => (
     <View style={styles.parserSelection} key={parser.id}>
       <RadioButton
         value={parser.id}
-        status={selectedParser?.id === parser.id ? "checked" : "unchecked"}
+        status={
+          parsers && parsers[selectedParserIndex].id === parser.id
+            ? "checked"
+            : "unchecked"
+        }
         onPress={() => {
-          setSelectedParser(parser);
+          setSelectedParserIndex(index);
         }}
         disabled={isLoading}
       />
@@ -144,27 +96,43 @@ export default function ParserSelections() {
     </View>
   ));
 
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      if (!isMounted) {
-        return;
-      }
-      await getAndSetParsers();
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const fetchParsers = async () => {
+        try {
+          setIsLoading(true);
+          const result = await getAllParsers();
+          if (isActive) {
+            setParsers(result);
+            setSelectedParserIndex(0);
+          }
+          setIsLoading(false);
+        } catch (err) {
+          alert(err);
+          console.error(err);
+          setIsLoading(false);
+        }
+      };
+      fetchParsers();
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
 
   return (
     <View style={{ opacity: isLoading ? 0.5 : 1 }}>
-      <Text style={styles.title} variant="headlineMedium">
-        Select a parser
-      </Text>
+      <View style={styles.title}>
+        {parsers?.length === 0 ? (
+          <Text variant="titleMedium">No parsers set up yet</Text>
+        ) : (
+          <Text variant="headlineMedium">Select a parser</Text>
+        )}
+      </View>
       <View style={styles.parsersList}>{parsersList}</View>
       {parsers?.length > 0 && (
-        <View>
+        <View style={styles.parsersModificationButtons}>
           <Button
             icon="pencil-outline"
             mode="text"
@@ -178,7 +146,10 @@ export default function ParserSelections() {
                     ? `./parser-modal`
                     : `../parser-modal`,
                 params: {
-                  id: selectedParser?.id,
+                  parserId:
+                    parsers?.length > 0
+                      ? parsers[selectedParserIndex].id
+                      : undefined,
                 },
               }}
             >
@@ -195,46 +166,27 @@ export default function ParserSelections() {
           </Button>
         </View>
       )}
-      <Button icon="plus" mode="text" disabled={isLoading} onPress={() => {}}>
-        <Link
-          href={{
-            pathname:
-              currentPath === "/parsers-modal"
-                ? "./parser-modal"
-                : "../parser-modal",
-            // params: {
-            //   routerPath:
-            //     currentPath === "/parsers-modal" ? "./parsers-modal" : "../parsers-modal",
-            // },
-          }}
-        >
-          Add new parser
-        </Link>
-      </Button>
-
-      <Button
-        mode="text"
-        buttonColor="red"
-        onPress={deleteAllAndSetParsers}
-        disabled={!parsers?.length || isLoading}
-      >
-        Delete All Parsers
-      </Button>
-      <Button
-        mode="text"
-        buttonColor="red"
-        onPress={dropAllDB}
-        disabled={isLoading}
-      >
-        Drop All SQL Tables
-      </Button>
+      <View style={styles.parsersModificationButtons}>
+        <Button icon="plus" mode="text" disabled={isLoading} onPress={() => {}}>
+          <Link
+            href={{
+              pathname:
+                currentPath === "/parsers-modal"
+                  ? "./parser-modal"
+                  : "../parser-modal",
+            }}
+          >
+            Add new parser
+          </Link>
+        </Button>
+      </View>
       {currentPath === "/parsers-modal" && (
         <Button
           style={styles.scanButton}
           icon="scan-helper"
           mode="contained"
           buttonColor="blue"
-          onPress={scan}
+          // onPress={scan}
           disabled={!(parsers?.length > 0) || isLoading}
         >
           Start scan
@@ -246,17 +198,20 @@ export default function ParserSelections() {
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 25,
-    fontWeight: "bold",
-    marginVertical: 20,
+    marginBottom: 20,
+    alignItems: "center",
   },
   parsersList: {
     alignItems: "flex-start",
+    marginBottom: 20,
   },
   parserSelection: {
     flexDirection: "row",
   },
+  parsersModificationButtons: {
+    alignItems: "flex-start",
+  },
   scanButton: {
-    marginVertical: 20,
+    marginTop: 20,
   },
 });
