@@ -69,7 +69,13 @@ export default function ImageDataModal() {
     setIsLoading(true);
     //delayedFunction();
     try {
-      await updateImageData({ fieldNames, imageDataRows: rows, images, imageDataId, parserId });
+      await updateImageData({
+        fieldNames,
+        imageDataRows: rows,
+        images,
+        imageDataId,
+        parserId,
+      });
       setIsLoading(false);
       router.back();
     } catch (err) {
@@ -114,7 +120,16 @@ export default function ImageDataModal() {
     setImages(updatedImages);
   };
 
-  const deleteRow = () => {
+  const deleteRow = (rowIndex) => {
+    const updatedRows = [...rows];
+    const updatedImages = [...images];
+    updatedRows.splice(rowIndex, 1);
+    updatedImages.splice(rowIndex, 1);
+    setRows(updatedRows);
+    setImages(updatedImages);
+  };
+
+  const deleteLastRow = () => {
     const updatedRows = [...rows];
     const updatedImages = [...images];
     updatedRows.pop();
@@ -129,6 +144,14 @@ export default function ImageDataModal() {
     setPage(0);
   };
 
+
+  const sortByColumn = (fieldNameIndex) => {
+  let ascending = rows.sort((row1, row2) => (row1[fieldNameIndex] > row2[fieldNameIndex]) ? 1 : -1);
+let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldNameIndex]) ? 1 : -1);
+
+  
+  
+  
   useEffect(() => {
     setPage(0);
   }, [itemsPerPage]);
@@ -163,10 +186,10 @@ export default function ImageDataModal() {
         <Button
           icon="minus"
           mode="text"
-          onPress={deleteRow}
+          onPress={deleteLastRow}
           disabled={isLoading}
         >
-          Delete row
+          Delete last row
         </Button>
         <Button
           icon="refresh"
@@ -176,6 +199,12 @@ export default function ImageDataModal() {
         >
           Reset rows
         </Button>
+        <Text variant="bodySmall">
+          ***To delete a specific row, long press that row's first cell***
+        </Text>
+        <Text variant="bodySmall">
+          ***To sort by a specific column, long press that column's header***
+        </Text>
       </View>
       <View style={styles.tableTitleContainer}>
         <Text variant="titleMedium">Scanned image table</Text>
@@ -195,6 +224,9 @@ export default function ImageDataModal() {
                     onPress={() => {
                       setModalFieldNameIndex(fieldNameIndex);
                       setModalText(fieldName);
+                    }}
+                    onLongPress={() => {
+                      sortByColumn(fieldNameIndex);
                     }}
                     labelStyle={{
                       textDecorationLine: "underline",
@@ -220,6 +252,26 @@ export default function ImageDataModal() {
                       />
                     </Modal>
                   </Portal>
+
+
+                  <Portal>
+                    <Modal
+                      visible={modalFieldNameIndex === fieldNameIndex}
+                      onDismiss={() => {
+                        setModalFieldNameIndex(null);
+                      }}
+                      contentContainerStyle={styles.modal}
+                    >
+                      <TextInput
+                        label={"Field name"}
+                        value={modalText}
+                        disabled={true}
+                      />
+                    </Modal>
+                  </Portal>
+
+
+                  
                 </View>
               ))}
             </View>
@@ -234,10 +286,6 @@ export default function ImageDataModal() {
               </View>
             ) : (
               rows?.slice(from, to).map((row, rowIndex) => (
-                //
-                //
-                //
-
                 <View key={rowIndex} style={styles.row}>
                   <View style={styles.cell}>
                     <Button
@@ -247,6 +295,9 @@ export default function ImageDataModal() {
                         setModalRowIndex(rowIndex);
                         setImage1(images[rowIndex][0]);
                         setImage2(images[rowIndex][1]);
+                      }}
+                      onLongPress={() => {
+                        deleteRow(rowIndex);
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
@@ -282,10 +333,6 @@ export default function ImageDataModal() {
                       </Modal>
                     </Portal>
                   </View>
-                  {/*  */}
-                  {/*  */}
-                  {/*  */}
-
                   {row?.map((cellData, cellIndex) => (
                     <View key={cellIndex} style={styles.cell}>
                       <Button

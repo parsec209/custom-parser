@@ -4,6 +4,7 @@ import {
   StyleSheet,
   View,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
 
@@ -35,8 +36,8 @@ export default function ParserModal() {
   const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([[""]]);
-  const [imageDataRows, setImageDataRows] = useState([]);  //ONLY EDITED WHEN DELETING COLUMN
-  const [images, setImages] = useState([]);  //ONLY EDITED WHEN DELETING LAST REMAINING COLUMN
+  const [imageDataRows, setImageDataRows] = useState([]); //ONLY EDITED WHEN DELETING COLUMN
+  const [images, setImages] = useState([]); //ONLY EDITED WHEN DELETING LAST REMAINING COLUMN
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
   const [itemsPerPage, onItemsPerPageChange] = useState(
@@ -57,18 +58,16 @@ export default function ParserModal() {
   //   }, 5000); // Delay of 5 seconds
   // };
 
-
-
   const getAndSetParserTextFields = async () => {
     try {
       setIsLoading(true);
       const parser = await getParser({ parserId });
-      const imageData = await getImageData({parserId});
+      const imageData = await getImageData({ parserId });
       setName(parser.name);
       setFieldNames(parser.fieldNames);
       setRows(parser.parserRows);
       setImageDataRows(imageData.imageDataRows);
-      setImages(imageData.images)
+      setImages(imageData.images);
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -92,12 +91,24 @@ export default function ParserModal() {
       try {
         if (parserId) {
           await updateParser({ name, fieldNames, parserRows: rows, parserId });
-          await updateImageData({name, fieldNames, imageDataRows, images, parserId});
+          await updateImageData({
+            name,
+            fieldNames,
+            imageDataRows,
+            images,
+            parserId,
+          });
           //add function for updating locally stored images
         } else {
-          await postParser({ name, fieldNames, parserRows: rows  });
+          await postParser({ name, fieldNames, parserRows: rows });
           const { parserId } = await getParser({ name });
-          await postImageData({ name, fieldNames, imageDataRows: [], images: [], parserId });
+          await postImageData({
+            name,
+            fieldNames,
+            imageDataRows: [],
+            images: [],
+            parserId,
+          });
         }
         setIsLoading(false);
         router.back();
@@ -137,8 +148,7 @@ export default function ParserModal() {
     setImageDataRows(updatedImageDataRows);
   };
 
-//ADD WARNING ABOUT DELETING ANY COLUMN, AND ESPECIALLY THE ONLY REMAINING COLUMN (WHICH WILL DELETE THE STORED IMAGE TOO)
-  const deleteColumn = () => {
+  const deleteLastColumn = () => {
     let updatedFieldNames = [...fieldNames];
     updatedFieldNames.pop();
     let updatedRows = rows.map((row) => {
@@ -149,7 +159,7 @@ export default function ParserModal() {
       row.pop();
       return row;
     });
-    let updatedImages = [...images]
+    let updatedImages = [...images];
     if (!updatedFieldNames.length) {
       updatedFieldNames = [""];
       updatedRows = [[""]];
@@ -162,6 +172,45 @@ export default function ParserModal() {
     setImageDataRows(updatedImageDataRows);
     setImages(updatedImages);
   };
+
+  const deleteColumn = (columnIndex) => {
+    let updatedFieldNames = [...fieldNames];
+    updatedFieldNames.splice(columnIndex, 1);
+
+    let updatedRows = rows.map((row) => {
+      row.splice(columnIndex, 1);
+      return row;
+    });
+    let updatedImageDataRows = imageDataRows.map((row) => {
+      row.splice(columnIndex, 1);
+      return row;
+    });
+    let updatedImages = [...images];
+    if (!updatedFieldNames.length) {
+      updatedFieldNames = [""];
+      updatedRows = [[""]];
+      updatedImageDataRows = [];
+      updatedImages = [];
+    }
+    setFieldNames(updatedFieldNames);
+    setRows(updatedRows);
+    setImageDataRows(updatedImageDataRows);
+    setImages(updatedImages);
+  };
+
+  const createTwoButtonAlert = (columnIndex) =>
+    Alert.alert("Alert", `OK to delete column?`, [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "OK",
+        onPress: () => {
+          deleteColumn(columnIndex);
+        },
+      },
+    ]);
 
   useEffect(() => {
     setPage(0);
@@ -200,7 +249,7 @@ export default function ParserModal() {
         />
         {isValidated && !name && (
           <Text variant="bodySmall" style={styles.invalidField}>
-            Parser image category is required.
+            Image category is required.
           </Text>
         )}
       </View>
@@ -216,17 +265,20 @@ export default function ParserModal() {
         <Button
           icon="minus"
           mode="text"
-          onPress={deleteColumn}
+          onPress={deleteLastColumn}
           disabled={isLoading}
         >
-          Delete column
+          Delete last column
         </Button>
+        <Text variant="bodySmall">
+          ***To delete a specific column, long press the column's header***
+        </Text>
       </View>
       <View style={styles.tableTitleContainer}>
         <Text variant="titleMedium">Parser table</Text>
         {isValidated && (!arefieldNamesValid() || !areRowsValid()) && (
           <Text variant="bodySmall" style={styles.invalidField}>
-            Please fill out any table fields that are in red.
+            Please fill out any table fields that are in red.I'm confused by
           </Text>
         )}
       </View>
@@ -242,6 +294,9 @@ export default function ParserModal() {
                     onPress={() => {
                       setModalFieldNameIndex(fieldNameIndex);
                       setModalText(fieldName);
+                    }}
+                    onLongPress={() => {
+                      createTwoButtonAlert(fieldNameIndex);
                     }}
                     labelStyle={{
                       textDecorationLine: "underline",
@@ -275,7 +330,6 @@ export default function ParserModal() {
                 </View>
               ))}
             </View>
-
             {rows?.slice(from, to).map((row, rowIndex) => (
               <View key={rowIndex} style={styles.row}>
                 {row?.map((prompt, cellIndex) => (
