@@ -4,41 +4,41 @@ import { Text, Button, RadioButton } from "react-native-paper";
 import { Link } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { getAllImagesData } from "../services/postService";
+import { getAllParserData } from "../services/postService";
 
-export default function ImageDataSelections() {
-  const [imagesData, setImagesData] = useState([]);
-  const [selectedImageDataIndex, setSelectedImageDataIndex] = useState(0);
+export default function ParserDataSelections() {
+  const [parsersData, setParsersData] = useState([]);
+  const [selectedParserDataIndex, setSelectedParserDataIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const imageDataList = imagesData?.map((imageData, index) => (
-    <View style={styles.imageDataSelection} key={imageData.id}>
+  const parserDataList = parsersData?.map((parserData, index) => (
+    <View style={styles.parserDataSelection} key={parserData.id}>
       <RadioButton
-        value={imageData.id}
+        value={parserData.id}
         status={
-          imagesData && imagesData[selectedImageDataIndex].id === imageData.id
+          parsersData && parsersData[selectedParserDataIndex].id === parserData.id
             ? "checked"
             : "unchecked"
         }
         onPress={() => {
-          setSelectedImageDataIndex(index);
+          setSelectedParserDataIndex(index);
         }}
         disabled={isLoading}
       />
-      <Text variant="titleMedium">{imageData.name}</Text>
+      <Text variant="titleMedium">{parserData.name}</Text>
     </View>
   ));
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      const fetchImagesData = async () => {
+      const fetchParsersData = async () => {
         try {
           setIsLoading(true);
-          const result = await getAllImagesData();
+          const result = await getAllParserData();
           if (isActive) {
-            setImagesData(result);
-            setSelectedImageDataIndex(0);
+            setParsersData(result);
+            setSelectedParserDataIndex(0);
           }
           setIsLoading(false);
         } catch (err) {
@@ -47,7 +47,7 @@ export default function ImageDataSelections() {
           setIsLoading(false);
         }
       };
-      fetchImagesData();
+      fetchParsersData();
       return () => {
         isActive = false;
       };
@@ -57,9 +57,9 @@ export default function ImageDataSelections() {
   return (
     <View style={{ opacity: isLoading ? 0.5 : 1 }}>
       <View style={styles.title}>
-        {imagesData?.length === 0 ? (
+        {parsersData?.length === 0 ? (
           <View>
-            <Text variant="titleMedium">No tables available.</Text>
+            <Text variant="titleMedium">No images scanned yet.</Text>
             <Button
               labelStyle={{
                 textDecorationLine: "underline",
@@ -78,12 +78,12 @@ export default function ImageDataSelections() {
             </Button>
           </View>
         ) : (
-          <Text variant="headlineMedium">Select a table</Text>
+          <Text variant="headlineMedium">Select a parser's data</Text>
         )}
       </View>
-      <View style={styles.imageDataList}>{imageDataList}</View>
-      {imagesData?.length > 0 && (
-        <View style={styles.imageDataModificationButtons}>
+      <View style={styles.parserDataList}>{parserDataList}</View>
+      {parsersData?.length > 0 && (
+        <View style={styles.parserDataModificationButtons}>
           <Button
             icon="pencil-outline"
             mode="text"
@@ -92,15 +92,15 @@ export default function ImageDataSelections() {
           >
             <Link
               href={{
-                pathname: `../image-data-modal`,
+                pathname: `../parserDataModal`,
                 params: {
-                  imageDataId:
-                    imagesData?.length > 0 &&
-                    imagesData[selectedImageDataIndex].id,
+                  parserDataId:
+                    parsersData?.length > 0 &&
+                    parsersData[selectedParserDataIndex].id,
                 },
               }}
             >
-              Edit selected table
+              Edit selected parser's data
             </Link>
           </Button>
         </View>
@@ -114,14 +114,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: "center",
   },
-  imageDataList: {
+  parserDataList: {
     alignItems: "flex-start",
     marginBottom: 20,
   },
-  imageDataSelection: {
+  parserDataSelection: {
     flexDirection: "row",
   },
-  imageDataModificationButtons: {
+  parserDataModificationButtons: {
     alignItems: "flex-start",
   },
 });

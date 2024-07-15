@@ -9,14 +9,18 @@ import {
   Portal,
   Modal,
   TextInput,
+  Menu,
+  IconButton,
+  Dialog,
 } from "react-native-paper";
-import { getImageData, updateImageData } from "../services/postService";
+import { getParserData, updateParserData } from "../services/postService";
 import ImageSelection from "../components/ImageSelection";
 
-export default function ImageDataModal() {
-  const { imageDataId, parserId } = useLocalSearchParams<{
-    imageDataId?: string;
+export default function ParserDataModal() {
+  const { parserDataId, parserId, rowHighlighted } = useLocalSearchParams<{
+    parserDataId?: string;
     parserId?: string;
+    rowHighlighted?: string;
   }>();
   const router = useRouter();
 
@@ -24,6 +28,8 @@ export default function ImageDataModal() {
   const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
   const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [modalRowIndex, setModalRowIndex] = useState(null); //string or null
+  const [sortMenuFieldNameIndex, setSortMenuFieldNameIndex] = useState(null); //string or null
+  const [dialogRowIndex, setDialogRowIndex] = useState(null); //string or null
   const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([]);
   const [images, setImages] = useState([]); // [[null || string, null || string]
@@ -31,22 +37,17 @@ export default function ImageDataModal() {
   const [image2, setImage2] = useState(null);
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
-  const [itemsPerPage, onItemsPerPageChange] = useState(
-    numberOfItemsPerPageList[0],
-  );
+  const [itemsPerPage, onItemsPerPageChange] = useState(4);
   const [modalText, setModalText] = useState("");
+  const [isHintVisible, setIsHintVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastRowIsHighlighted, setLastRowIsHighlighted] = useState(
+    Boolean(rowHighlighted),
+  );
 
   const from = page * itemsPerPage;
   const to = Math.min((page + 1) * itemsPerPage, rows.length);
-
-  // const delayedFunction = () => {
-  //   setTimeout(() => {
-  //     // Your function goes here
-  //     setIsLoading(false);
-  //     console.log("Button pressed with 5 second delay!");
-  //   }, 5000); // Delay of 5 seconds
-  // };
+  const numberOfPages = Math.ceil(rows.length / itemsPerPage);
 
   const updateRowImages = (rowIndex) => {
     const updatedImages = [...images];
@@ -69,11 +70,11 @@ export default function ImageDataModal() {
     setIsLoading(true);
     //delayedFunction();
     try {
-      await updateImageData({
+      await updateParserData({
         fieldNames,
-        imageDataRows: rows,
+        parserDataRows: rows,
         images,
-        imageDataId,
+        parserDataId,
         parserId,
       });
       setIsLoading(false);
@@ -85,14 +86,14 @@ export default function ImageDataModal() {
     }
   };
 
-  const getAndSetImageDataFields = async () => {
+  const getAndSetParserDataFields = async () => {
     try {
       setIsLoading(true);
-      const imageData = await getImageData({ imageDataId, parserId });
-      setName(imageData.name);
-      setFieldNames(imageData.fieldNames);
-      setRows(imageData.imageDataRows);
-      setImages(imageData.images);
+      const parserData = await getParserData({ parserDataId, parserId });
+      setName(parserData.name);
+      setFieldNames(parserData.fieldNames);
+      setRows(parserData.parserDataRows);
+      setImages(parserData.images);
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -108,6 +109,9 @@ export default function ImageDataModal() {
   };
 
   const addRow = () => {
+    if (lastRowIsHighlighted) {
+      setLastRowIsHighlighted(false);
+    }
     const updatedRows = [...rows];
     const updatedImages = [...images];
     const newRow = fieldNames.map(() => {
@@ -121,6 +125,9 @@ export default function ImageDataModal() {
   };
 
   const deleteRow = (rowIndex) => {
+    if (lastRowIsHighlighted) {
+      setLastRowIsHighlighted(false);
+    }
     const updatedRows = [...rows];
     const updatedImages = [...images];
     updatedRows.splice(rowIndex, 1);
@@ -130,6 +137,9 @@ export default function ImageDataModal() {
   };
 
   const deleteLastRow = () => {
+    if (lastRowIsHighlighted) {
+      setLastRowIsHighlighted(false);
+    }
     const updatedRows = [...rows];
     const updatedImages = [...images];
     updatedRows.pop();
@@ -139,21 +149,40 @@ export default function ImageDataModal() {
   };
 
   const resetRows = () => {
+    if (lastRowIsHighlighted) {
+      setLastRowIsHighlighted(false);
+    }
     setRows([]);
     setImages([]);
     setPage(0);
   };
 
+  const sortColumn = (fieldNameIndex, sortDirection) => {
+    if (lastRowIsHighlighted) {
+      setLastRowIsHighlighted(false);
+    }
+    const rowsWithIndices = rows.map((value, index) => ({ value, index }));
+    if (sortDirection === "ascending") {
+      rowsWithIndices.sort((a, b) =>
+        a.value[fieldNameIndex].localeCompare(b.value[fieldNameIndex]),
+      );
+    } else if (sortDirection === "descending") {
+      rowsWithIndices.sort((a, b) =>
+        b.value[fieldNameIndex].localeCompare(a.value[fieldNameIndex]),
+      );
+    }
+    const updatedRows = rowsWithIndices.map((item) => item.value);
+    const updatedImages = rowsWithIndices.map((item) => images[item.index]);
+    setRows(updatedRows);
+    setImages(updatedImages);
+  };
 
-  const sortByColumn = (fieldNameIndex) => {
-  let ascending = rows.sort((row1, row2) => (row1[fieldNameIndex] > row2[fieldNameIndex]) ? 1 : -1);
-let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldNameIndex]) ? 1 : -1);
-
-  
-  
-  
   useEffect(() => {
-    setPage(0);
+    if (lastRowIsHighlighted) {
+      setPage(numberOfPages);
+    } else {
+      setPage(0);
+    }
   }, [itemsPerPage]);
 
   useEffect(() => {
@@ -162,7 +191,7 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
       if (!isMounted) {
         return;
       }
-      await getAndSetImageDataFields();
+      await getAndSetParserDataFields();
     })();
     return () => {
       isMounted = false;
@@ -199,44 +228,96 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
         >
           Reset rows
         </Button>
-        <Text variant="bodySmall">
+        {/* <Text variant="bodySmall">
           ***To delete a specific row, long press that row's first cell***
         </Text>
         <Text variant="bodySmall">
           ***To sort by a specific column, long press that column's header***
-        </Text>
+        </Text> */}
+        <IconButton
+          icon="help-circle-outline"
+          size={20}
+          onPress={() => {
+            setIsHintVisible(true);
+          }}
+        />
+        <Portal>
+          <Modal
+            visible={isHintVisible}
+            onDismiss={() => {
+              setIsHintVisible(false);
+            }}
+            contentContainerStyle={styles.modal}
+          >
+            <Text variant="bodyMedium" style={styles.dialog}>
+              To delete a specific row:
+            </Text>
+            <Text variant="bodySmall">Long press that row's image link.</Text>
+            <Text> </Text>
+            <Text variant="bodyMedium" style={styles.dialog}>
+              To sort by column:
+            </Text>
+            <Text variant="bodySmall">
+              Long press that column's header link.
+            </Text>
+          </Modal>
+        </Portal>
       </View>
       <View style={styles.tableTitleContainer}>
-        <Text variant="titleMedium">Scanned image table</Text>
+        <Text variant="titleMedium">Parser data</Text>
       </View>
       <View>
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
           <View style={styles.table}>
             <View style={styles.row}>
               <View style={styles.cell}>
-                <Text variant="bodySmall">Image link</Text>
+                <Text variant="bodySmall">Images</Text>
               </View>
               {fieldNames?.map((fieldName, fieldNameIndex) => (
                 <View key={fieldNameIndex} style={styles.cell}>
-                  <Button
-                    mode="text"
-                    disabled={isLoading}
-                    onPress={() => {
-                      setModalFieldNameIndex(fieldNameIndex);
-                      setModalText(fieldName);
+                  <Menu
+                    visible={sortMenuFieldNameIndex === fieldNameIndex}
+                    onDismiss={() => {
+                      setSortMenuFieldNameIndex(null);
                     }}
-                    onLongPress={() => {
-                      sortByColumn(fieldNameIndex);
-                    }}
-                    labelStyle={{
-                      textDecorationLine: "underline",
-                      color: "blue",
-                    }}
+                    anchor={
+                      <Button
+                        mode="text"
+                        disabled={isLoading}
+                        onPress={() => {
+                          setModalFieldNameIndex(fieldNameIndex);
+                          setModalText(fieldName);
+                        }}
+                        onLongPress={() => {
+                          setSortMenuFieldNameIndex(fieldNameIndex);
+                        }}
+                        labelStyle={{
+                          textDecorationLine: "underline",
+                          color: "blue",
+                        }}
+                      >
+                        {fieldName?.length > 20
+                          ? fieldName.substring(0, 20) + "..."
+                          : fieldName}
+                      </Button>
+                    }
                   >
-                    {fieldName?.length > 20
-                      ? fieldName.substring(0, 20) + "..."
-                      : fieldName}
-                  </Button>
+                    <Menu.Item
+                      onPress={() => {
+                        sortColumn(fieldNameIndex, "ascending");
+                        setSortMenuFieldNameIndex(null);
+                      }}
+                      title="Sort ascending"
+                    />
+                    <Menu.Item
+                      onPress={() => {
+                        sortColumn(fieldNameIndex, "descending");
+                        setSortMenuFieldNameIndex(null);
+                      }}
+                      title="Sort descending"
+                    />
+                  </Menu>
+
                   <Portal>
                     <Modal
                       visible={modalFieldNameIndex === fieldNameIndex}
@@ -246,32 +327,12 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
                       contentContainerStyle={styles.modal}
                     >
                       <TextInput
-                        label={"Field name"}
+                        label={"Header name"}
                         value={modalText}
                         disabled={true}
                       />
                     </Modal>
                   </Portal>
-
-
-                  <Portal>
-                    <Modal
-                      visible={modalFieldNameIndex === fieldNameIndex}
-                      onDismiss={() => {
-                        setModalFieldNameIndex(null);
-                      }}
-                      contentContainerStyle={styles.modal}
-                    >
-                      <TextInput
-                        label={"Field name"}
-                        value={modalText}
-                        disabled={true}
-                      />
-                    </Modal>
-                  </Portal>
-
-
-                  
                 </View>
               ))}
             </View>
@@ -297,7 +358,7 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
                         setImage2(images[rowIndex][1]);
                       }}
                       onLongPress={() => {
-                        deleteRow(rowIndex);
+                        setDialogRowIndex(rowIndex);
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
@@ -311,6 +372,7 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
                         ? "Add image"
                         : "View image"}
                     </Button>
+
                     <Portal>
                       <Modal
                         visible={modalRowIndex === rowIndex}
@@ -318,7 +380,10 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
                           updateRowImages(rowIndex);
                           setModalRowIndex(null);
                         }}
-                        contentContainerStyle={styles.modal}
+                        contentContainerStyle={[
+                          styles.modal,
+                          styles.imageModal,
+                        ]}
                       >
                         <View style={styles.imageSelections}>
                           <ImageSelection
@@ -332,9 +397,52 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
                         </View>
                       </Modal>
                     </Portal>
+
+                    <Portal>
+                      <Dialog
+                        visible={dialogRowIndex === rowIndex}
+                        onDismiss={() => {
+                          setDialogRowIndex(null);
+                        }}
+                      >
+                        <Dialog.Content>
+                          <Text variant="bodyMedium">
+                            Ok to delete this entire row?
+                          </Text>
+                        </Dialog.Content>
+                        <Dialog.Actions>
+                          <Button
+                            onPress={() => {
+                              deleteRow(rowIndex);
+                            }}
+                          >
+                            OK
+                          </Button>
+                        </Dialog.Actions>
+                        <Dialog.Actions>
+                          <Button
+                            onPress={() => {
+                              setDialogRowIndex(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </Dialog.Actions>
+                      </Dialog>
+                    </Portal>
                   </View>
                   {row?.map((cellData, cellIndex) => (
-                    <View key={cellIndex} style={styles.cell}>
+                    //if last row and lastRowIsHighlighted --- styles.cell = blue (unhighlight when doing any action on the rows or columns)
+
+                    <View
+                      key={cellIndex}
+                      style={[
+                        styles.cell,
+                        rowIndex === row.length - 1 &&
+                          lastRowIsHighlighted &&
+                          styles.highlightedCell,
+                      ]}
+                    >
                       <Button
                         mode="text"
                         disabled={isLoading}
@@ -384,7 +492,7 @@ let descending = arr.sort((row1, row2) => (row1[fieldNameIndex] < row2[fieldName
         <DataTable.Pagination
           style={styles.pagination}
           page={page}
-          numberOfPages={Math.ceil(rows.length / itemsPerPage)}
+          numberOfPages={numberOfPages}
           onPageChange={(page) => setPage(page)}
           label={`${from + 1}-${to} of ${rows.length}`}
           numberOfItemsPerPageList={numberOfItemsPerPageList}
@@ -426,6 +534,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 16,
   },
+  dialog: {
+    fontWeight: "bold",
+  },
   tableTitleContainer: {
     alignItems: "center",
     marginBottom: 10,
@@ -439,6 +550,9 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 20,
     marginHorizontal: 16,
+  },
+  imageModal: {
+    alignItems: "center",
   },
   table: {
     backgroundColor: "white",
@@ -465,6 +579,9 @@ const styles = StyleSheet.create({
     borderColor: "grey",
     justifyContent: "center",
     alignItems: "center",
+  },
+  highlightedCell: {
+    color: "lightgreen",
   },
   pagination: {
     backgroundColor: "white",

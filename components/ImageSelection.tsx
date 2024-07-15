@@ -33,7 +33,6 @@ export default function ImageSelection({ image, handleImageUpdate }) {
   const takePhoto = async () => {
     const pendingResult = await ImagePicker.getPendingResultAsync();
     if (pendingResult && pendingResult.length > 0) {
-      console.log(pendingResult);
     }
     const { assets } = await ImagePicker.launchCameraAsync({
       allowsEditing: true,

@@ -9,15 +9,6 @@ let db = null;
 })();
 
 const validateQuery = (query) => {
-  const {
-    name,
-    fieldNames,
-    parserRows,
-    imageDataRows,
-    images,
-    parserId,
-    imageDataId,
-  } = query;
   for (const [key, value] of Object.entries(query)) {
     if (key === "name" && value) {
       if (!(typeof value === "string" && value.length)) {
@@ -25,17 +16,17 @@ const validateQuery = (query) => {
       }
     }
 
-    if (key === "fieldNames" && value) {
+    if (key === "headers" && value) {
       if (
         !(
           Array.isArray(value) &&
           value.length &&
           value.every(
-            (fieldName) => typeof fieldName === "string" && fieldName.length,
+            (header) => typeof header === "string" && header.length,
           )
         )
       ) {
-        throw new Error(`Invalid data type for "fieldNames"`);
+        throw new Error(`Invalid data type for "headers"`);
       }
     }
 
@@ -47,33 +38,32 @@ const validateQuery = (query) => {
           value.every(
             (row) =>
               Array.isArray(row) &&
-              row.length === fieldNames?.length &&
+              row.length === query.headers?.length &&
               row.every((cell) => typeof cell === "string" && cell.length),
           )
         )
       ) {
-        throw new Error(`Invalid data type for "promptRows"`);
+        throw new Error(`Invalid data type for "parserRows"`);
       }
     }
 
-    if (key === "imageDataRows" && value) {
+    if (key === "parserDataRows" && value) {
       if (
         !(
           Array.isArray(value) &&
           value.every(
             (row) =>
               Array.isArray(row) &&
-              row.length === fieldNames.length &&
+              row.length === query.headers.length &&
               row.every((cell) => typeof cell === "string"),
           )
         )
       ) {
-        throw new Error(`Invalid data type for "imageDataRows"`);
+        throw new Error(`Invalid data type for "parserDataRows"`);
       }
     }
 
     if (key === "images" && value) {
-      console.log(JSON.stringify(images));
       if (
         !(
           Array.isArray(value) &&
@@ -99,9 +89,9 @@ const validateQuery = (query) => {
       }
     }
 
-    if (key === "imageDataId" && value) {
+    if (key === "parserDataId" && value) {
       if (!(typeof value === "string" && value.length)) {
-        throw new Error(`Invalid data type for "imageDataId"`);
+        throw new Error(`Invalid data type for "parserDataId"`);
       }
     }
   }
@@ -109,24 +99,21 @@ const validateQuery = (query) => {
 
 export const createTables = async () => {
   await db.execAsync(`
-  CREATE TABLE IF NOT EXISTS parsers (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL UNIQUE, fields TEXT NOT NULL, prompts TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS images_data (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL UNIQUE, fields TEXT NOT NULL, data TEXT NOT NULL, images TEXT NOT NULL, parser_id INTEGER NOT NULL, FOREIGN KEY(parser_id) REFERENCES parsers(id) ON DELETE CASCADE);`);
-  console.log("CREATED PARSERS AND IMAGES_DATA TABLE");
+  CREATE TABLE IF NOT EXISTS parsers (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL UNIQUE, headers TEXT NOT NULL, rows TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS parsers_data (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL UNIQUE, headers TEXT NOT NULL, rows TEXT NOT NULL, images TEXT NOT NULL, parser_id INTEGER NOT NULL, FOREIGN KEY(parser_id) REFERENCES parsers(id) ON DELETE CASCADE);`);
 };
 
 export const getAllParsers = async () => {
   const result = await db.getAllAsync(
     "SELECT * FROM parsers ORDER BY name ASC;",
   );
-  console.log("GET ALL PARSERS: " + JSON.stringify(result));
   return result;
 };
 
-export const getAllImagesData = async () => {
+export const getAllParserData = async () => {
   const result = await db.getAllAsync(
-    "SELECT * FROM images_data ORDER BY name ASC;",
+    "SELECT * FROM parsers_data ORDER BY name ASC;",
   );
-  console.log("GET ALL images_data: " + JSON.stringify(result));
   return result;
 };
 
@@ -139,65 +126,64 @@ export const getParser = async (query) => {
   return {
     parserId: result.id.toString(),
     name: result.name,
-    fieldNames: JSON.parse(result.fields),
-    parserRows: JSON.parse(result.prompts),
+    headers: JSON.parse(result.headers),
+    parserRows: JSON.parse(result.rows),
   };
 };
 
-export const getImageData = async (query) => {
-  const { imageDataId, parserId } = query;
+export const getParserData = async (query) => {
+  const { parserDataId, parserId } = query;
   const result = await db.getFirstAsync(
-    "SELECT * FROM images_data WHERE id = CAST(? AS INTEGER) OR parser_id = CAST(? AS INTEGER)",
-    [imageDataId, parserId],
+    "SELECT * FROM parsers_data WHERE id = CAST(? AS INTEGER) OR parser_id = CAST(? AS INTEGER)",
+    [parserDataId, parserId],
   );
   return {
-    imageDataId: result.id.toString(),
+    parserDataId: result.id.toString(),
     name: result.name,
-    fieldNames: JSON.parse(result.fields),
-    imageDataRows: JSON.parse(result.data),
+    headers: JSON.parse(result.headers),
+    parserDataRows: JSON.parse(result.rows),
     images: JSON.parse(result.images),
   };
 };
 
 export const postParser = async (query) => {
-  const { name, fieldNames, parserRows } = query;
+  const { name, headers, parserRows } = query;
   validateQuery(query);
-  const stringifiedFieldNames = JSON.stringify(fieldNames);
+  const stringifiedHeaders = JSON.stringify(headers);
   const stringifiedRows = JSON.stringify(parserRows);
   await db.runAsync(
-    "INSERT INTO parsers (name, fields, prompts) VALUES (?, ?, ?)",
-    [name, stringifiedFieldNames, stringifiedRows],
+    "INSERT INTO parsers (name, headers, rows) VALUES (?, ?, ?)",
+    [name, stringifiedHeaders, stringifiedRows],
   );
 };
 
-export const postImageData = async (query) => {
-  const { name, fieldNames, imageDataRows, images, parserId } = query;
+export const postParserData = async (query) => {
+  const { name, headers, parserDataRows, images, parserId } = query;
   validateQuery(query);
-  const stringifiedFieldNames = JSON.stringify(fieldNames);
-  const stringifiedRows = JSON.stringify(imageDataRows);
+  const stringifiedHeaders = JSON.stringify(headers);
+  const stringifiedRows = JSON.stringify(parserDataRows);
   const stringifiedImages = JSON.stringify(images);
   await db.runAsync(
-    "INSERT INTO images_data (name, fields, data, images, parser_id) VALUES (?, ?, ?, ?, ?)",
-    [name, stringifiedFieldNames, stringifiedRows, stringifiedImages, parserId],
+    "INSERT INTO parsers_data (name, headers, rows, images, parser_id) VALUES (?, ?, ?, ?, ?)",
+    [name, stringifiedHeaders, stringifiedRows, stringifiedImages, parserId],
   );
 };
 
 export const updateParser = async (query) => {
-  const { name, fieldNames, parserRows, parserId } = query;
+  const { name, headers, parserRows, parserId } = query;
   validateQuery(query);
-  const stringifiedFieldNames = JSON.stringify(fieldNames);
+  const stringifiedHeaders = JSON.stringify(headers);
   const stringifiedRows = JSON.stringify(parserRows);
   await db.runAsync(
     `UPDATE parsers 
     SET name = CASE WHEN ? IS NOT NULL THEN ? ELSE name END, 
-    fields = CASE WHEN ? IS NOT NULL THEN ? ELSE fields END, 
-    prompts = CASE WHEN ? IS NOT NULL THEN ? ELSE prompts END
+    headers = ?, 
+    rows = CASE WHEN ? IS NOT NULL THEN ? ELSE rows END
     WHERE id = CAST(? AS INTEGER);`,
     [
       name,
       name,
-      stringifiedFieldNames,
-      stringifiedFieldNames,
+      stringifiedHeaders,
       stringifiedRows,
       stringifiedRows,
       parserId,
@@ -205,30 +191,29 @@ export const updateParser = async (query) => {
   );
 };
 
-export const updateImageData = async (query) => {
-  const { name, fieldNames, imageDataRows, images, imageDataId, parserId } =
+export const updateParserData = async (query) => {
+  const { name, headers, parserDataRows, images, parserDataId, parserId } =
     query;
   validateQuery(query);
-  const stringifiedFieldNames = JSON.stringify(fieldNames);
-  const stringifiedRows = JSON.stringify(imageDataRows);
+  const stringifiedHeaders = JSON.stringify(headers);
+  const stringifiedRows = JSON.stringify(parserDataRows);
   const stringifiedImages = JSON.stringify(images);
   await db.runAsync(
-    `UPDATE images_data 
+    `UPDATE parsers_data 
     SET name = CASE WHEN ? IS NOT NULL THEN ? ELSE name END, 
-    fields = CASE WHEN ? IS NOT NULL THEN ? ELSE fields END, 
-    data = CASE WHEN ? IS NOT NULL THEN ? ELSE data END,
+    headers = ?, 
+    rows = CASE WHEN ? IS NOT NULL THEN ? ELSE rows END,
     images = CASE WHEN ? IS NOT NULL THEN ? ELSE images END
     WHERE id = ? OR parser_id = ?;`,
     [
       name,
       name,
-      stringifiedFieldNames,
-      stringifiedFieldNames,
+      stringifiedHeaders,
       stringifiedRows,
       stringifiedRows,
       stringifiedImages,
       stringifiedImages,
-      imageDataId,
+      parserDataId,
       parserId,
     ],
   );
@@ -251,9 +236,9 @@ export const dropParsersTable = async () => {
   }
 };
 
-export const dropImagesDataTable = async () => {
+export const dropParsersDataTable = async () => {
   try {
-    await db.execAsync(`DROP TABLE IF EXISTS images_data`);
+    await db.execAsync(`DROP TABLE IF EXISTS parsers_data`);
   } catch (err) {
     alert(err);
     console.error(err);

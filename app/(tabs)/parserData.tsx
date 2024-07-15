@@ -1,11 +1,11 @@
 import { StyleSheet, View } from "react-native";
 
-import ImageDataSelections from "../../components/ImageDataSelections";
+import ParserDataSelections from "../../components/ParserDataSelections";
 
-export default function ImagesDataTab() {
+export default function ParserDataTab() {
   return (
     <View style={styles.container}>
-      <ImageDataSelections />
+      <ParserDataSelections />
     </View>
   );
 }

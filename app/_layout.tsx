@@ -24,6 +24,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [selectedImages, setSelectedImages] = useState([null, null]);
 
+
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
@@ -73,15 +74,19 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
-            name="parsers-modal"
+            name="parsersModal"
             options={{
               presentation: "modal",
-              title: "Parser selection",
+              title: "Parsers",
             }}
           />
           <Stack.Screen
-            name="parser-modal"
-            options={{ presentation: "modal", title: "Parser setup" }}
+            name="parserModal"
+            options={{ presentation: "modal", title: "Parser" }}
+          />
+          <Stack.Screen
+            name="parserDataModal"
+            options={{ presentation: "modal", title: "Parser data" }}
           />
         </Stack>
       </SelectedImagesProvider>

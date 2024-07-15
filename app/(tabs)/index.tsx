@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { Divider, Text, Button } from "react-native-paper";
 import { Link } from "expo-router";
@@ -7,7 +7,7 @@ import ImageSelection from "../../components/ImageSelection";
 import {
   deleteAll,
   dropParsersTable,
-  dropImagesDataTable,
+  dropParsersDataTable,
 } from "../../services/postService";
 import { SelectedImagesContext } from "../../contexts/selectedImagesContext";
 
@@ -15,6 +15,8 @@ export default function ScannerTab() {
   const { selectedImages, setSelectedImages } = useContext(
     SelectedImagesContext,
   ); // as GamesContextType (example), type is defined in context file;
+
+  //console.log(selectedImages)
 
   const [image1, setImage1] = useState(null);
   const [image2, setImage2] = useState(null);
@@ -46,16 +48,20 @@ export default function ScannerTab() {
   const dropAllTables = async () => {
     try {
       await dropParsersTable();
-      await dropImagesDataTable();
+      await dropParsersDataTable();
     } catch (err) {
       alert(err);
       console.error(err);
     }
   };
 
+  useEffect(() => {
+    updateSelectedImages();
+  }, [image1, image2]);
+
   return (
     <View style={styles.container}>
-      <Text variant="bodyMedium">Select up to two images per scan.</Text>
+      <Text variant="bodyMedium">Select one to two images per scan.</Text>
       <Text variant="bodyMedium">Use camera or photo library.</Text>
       <Divider bold style={styles.divider} />
 
@@ -67,11 +73,12 @@ export default function ScannerTab() {
       <Button
         mode="contained"
         buttonColor="blue"
-        //disabled={!selectedImages[0] && !selectedImage2}
+        disabled={!selectedImages[0] && !selectedImages[1]}
         onPress={() => {}}
       >
-        <Link href="../parsers-modal">Select parser</Link>
+        <Link href="../parsersModal">Select parser</Link>
       </Button>
+
 
       <Button
         mode="text"

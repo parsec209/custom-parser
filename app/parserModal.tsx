@@ -4,7 +4,6 @@ import {
   StyleSheet,
   View,
   ScrollView,
-  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
 
@@ -15,14 +14,17 @@ import {
   Portal,
   Modal,
   TextInput,
+  IconButton,
+  Dialog,
+  HelperText,
 } from "react-native-paper";
 import {
   getParser,
   updateParser,
   postParser,
-  getImageData,
-  postImageData,
-  updateImageData,
+  getParserData,
+  postParserData,
+  updateParserData,
 } from "../services/postService";
 
 export default function ParserModal() {
@@ -34,17 +36,17 @@ export default function ParserModal() {
   const [name, setName] = useState("");
   const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
   const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
+  const [dialogColumnIndex, setDialogColumnIndex] = useState(null); //string or null
   const [fieldNames, setFieldNames] = useState([""]);
   const [rows, setRows] = useState([[""]]);
-  const [imageDataRows, setImageDataRows] = useState([]); //ONLY EDITED WHEN DELETING COLUMN
+  const [parserDataRows, setParserDataRows] = useState([]); //ONLY EDITED WHEN DELETING COLUMN
   const [images, setImages] = useState([]); //ONLY EDITED WHEN DELETING LAST REMAINING COLUMN
   const [page, setPage] = useState<number>(0);
   const [numberOfItemsPerPageList] = useState([2, 3, 4]);
-  const [itemsPerPage, onItemsPerPageChange] = useState(
-    numberOfItemsPerPageList[0],
-  );
+  const [itemsPerPage, onItemsPerPageChange] = useState(4);
   const [isValidated, setIsValidated] = useState(false);
   const [modalText, setModalText] = useState("");
+  const [isHintVisible, setIsHintVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const from = page * itemsPerPage;
@@ -62,12 +64,12 @@ export default function ParserModal() {
     try {
       setIsLoading(true);
       const parser = await getParser({ parserId });
-      const imageData = await getImageData({ parserId });
+      const parserData = await getParserData({ parserId });
       setName(parser.name);
       setFieldNames(parser.fieldNames);
       setRows(parser.parserRows);
-      setImageDataRows(imageData.imageDataRows);
-      setImages(imageData.images);
+      setParserDataRows(parserData.parserDataRows);
+      setImages(parserData.images);
       setIsLoading(false);
     } catch (err) {
       alert(err);
@@ -91,21 +93,20 @@ export default function ParserModal() {
       try {
         if (parserId) {
           await updateParser({ name, fieldNames, parserRows: rows, parserId });
-          await updateImageData({
+          await updateParserData({
             name,
             fieldNames,
-            imageDataRows,
+            parserDataRows,
             images,
             parserId,
           });
-          //add function for updating locally stored images
         } else {
           await postParser({ name, fieldNames, parserRows: rows });
           const { parserId } = await getParser({ name });
-          await postImageData({
+          await postParserData({
             name,
             fieldNames,
-            imageDataRows: [],
+            parserDataRows: [],
             images: [],
             parserId,
           });
@@ -140,12 +141,12 @@ export default function ParserModal() {
     const updatedRows = rows.map((row) => {
       return [...row, ""];
     });
-    const updatedImageDataRows = imageDataRows.map((row) => {
+    const updatedParserDataRows = parserDataRows.map((row) => {
       return [...row, ""];
     });
     setFieldNames(updatedFieldNames);
     setRows(updatedRows);
-    setImageDataRows(updatedImageDataRows);
+    setParserDataRows(updatedParserDataRows);
   };
 
   const deleteLastColumn = () => {
@@ -155,7 +156,7 @@ export default function ParserModal() {
       row.pop();
       return row;
     });
-    let updatedImageDataRows = imageDataRows.map((row) => {
+    let updatedParserDataRows = parserDataRows.map((row) => {
       row.pop();
       return row;
     });
@@ -163,13 +164,12 @@ export default function ParserModal() {
     if (!updatedFieldNames.length) {
       updatedFieldNames = [""];
       updatedRows = [[""]];
-      updatedImageDataRows = [];
+      updatedParserDataRows = [];
       updatedImages = [];
-      //Add function to delete all stored images for table
     }
     setFieldNames(updatedFieldNames);
     setRows(updatedRows);
-    setImageDataRows(updatedImageDataRows);
+    setParserDataRows(updatedParserDataRows);
     setImages(updatedImages);
   };
 
@@ -181,7 +181,7 @@ export default function ParserModal() {
       row.splice(columnIndex, 1);
       return row;
     });
-    let updatedImageDataRows = imageDataRows.map((row) => {
+    let updatedParserDataRows = parserDataRows.map((row) => {
       row.splice(columnIndex, 1);
       return row;
     });
@@ -189,28 +189,14 @@ export default function ParserModal() {
     if (!updatedFieldNames.length) {
       updatedFieldNames = [""];
       updatedRows = [[""]];
-      updatedImageDataRows = [];
+      updatedParserDataRows = [];
       updatedImages = [];
     }
     setFieldNames(updatedFieldNames);
     setRows(updatedRows);
-    setImageDataRows(updatedImageDataRows);
+    setParserDataRows(updatedParserDataRows);
     setImages(updatedImages);
   };
-
-  const createTwoButtonAlert = (columnIndex) =>
-    Alert.alert("Alert", `OK to delete column?`, [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "OK",
-        onPress: () => {
-          deleteColumn(columnIndex);
-        },
-      },
-    ]);
 
   useEffect(() => {
     setPage(0);
@@ -241,17 +227,16 @@ export default function ParserModal() {
           label="Image category"
           style={styles.nameInput}
           value={name}
+          maxLength={50}
           placeholder="Enter image category"
           onChangeText={(name) => {
             setName(name);
           }}
           disabled={isLoading}
         />
-        {isValidated && !name && (
-          <Text variant="bodySmall" style={styles.invalidField}>
-            Image category is required.
-          </Text>
-        )}
+        <HelperText type="error" visible={isValidated && !name}>
+          Image category required
+        </HelperText>
       </View>
       <View style={styles.tableButtonContainer}>
         <Button
@@ -270,15 +255,35 @@ export default function ParserModal() {
         >
           Delete last column
         </Button>
-        <Text variant="bodySmall">
-          ***To delete a specific column, long press the column's header***
-        </Text>
+        <IconButton
+          icon="help-circle-outline"
+          size={20}
+          onPress={() => {
+            setIsHintVisible(true);
+          }}
+        />
+        <Portal>
+          <Modal
+            visible={isHintVisible}
+            onDismiss={() => {
+              setIsHintVisible(false);
+            }}
+            contentContainerStyle={styles.modal}
+          >
+            <Text variant="bodyMedium" style={styles.dialog}>
+              To delete a specific column,{" "}
+            </Text>
+            <Text variant="bodyMedium">
+              long press that column's header link.
+            </Text>
+          </Modal>
+        </Portal>
       </View>
       <View style={styles.tableTitleContainer}>
-        <Text variant="titleMedium">Parser table</Text>
+        <Text variant="titleMedium">Table headers & prompts</Text>
         {isValidated && (!arefieldNamesValid() || !areRowsValid()) && (
           <Text variant="bodySmall" style={styles.invalidField}>
-            Please fill out any table fields that are in red.I'm confused by
+            Please add text to any red-colored table fields
           </Text>
         )}
       </View>
@@ -296,7 +301,7 @@ export default function ParserModal() {
                       setModalText(fieldName);
                     }}
                     onLongPress={() => {
-                      createTwoButtonAlert(fieldNameIndex);
+                      setDialogColumnIndex(fieldNameIndex);
                     }}
                     labelStyle={{
                       textDecorationLine: "underline",
@@ -307,7 +312,7 @@ export default function ParserModal() {
                       ? fieldName.length > 20
                         ? fieldName.substring(0, 20) + "..."
                         : fieldName
-                      : "Field name"}
+                      : "Header name"}
                   </Button>
                   <Portal>
                     <Modal
@@ -319,13 +324,52 @@ export default function ParserModal() {
                       contentContainerStyle={styles.modal}
                     >
                       <TextInput
-                        label={"Field name"}
+                        label={"Header name"}
                         value={modalText}
                         onChangeText={(text) => {
                           setModalText(text);
                         }}
                       />
                     </Modal>
+                  </Portal>
+
+                  <Portal>
+                    <Dialog
+                      visible={dialogColumnIndex === fieldNameIndex}
+                      onDismiss={() => {
+                        setDialogColumnIndex(null);
+                      }}
+                    >
+                      <Dialog.Content>
+                        <Text variant="bodyMedium" style={styles.dialog}>
+                          Ok to delete this column?
+                        </Text>
+                        <Text> </Text>
+                        <Text variant="bodySmall">
+                          This will also delete the same column of this
+                          parser's data table.
+                        </Text>
+                      </Dialog.Content>
+                      <Dialog.Actions>
+                        <Button
+                          onPress={() => {
+                            deleteColumn(fieldNameIndex);
+                            setDialogColumnIndex(null);
+                          }}
+                        >
+                          OK
+                        </Button>
+                      </Dialog.Actions>
+                      <Dialog.Actions>
+                        <Button
+                          onPress={() => {
+                            setDialogColumnIndex(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </Dialog.Actions>
+                    </Dialog>
                   </Portal>
                 </View>
               ))}
@@ -350,7 +394,7 @@ export default function ParserModal() {
                         ? prompt.length > 20
                           ? prompt.substring(0, 20) + "..."
                           : prompt
-                        : "Field value prompt"}
+                        : "Cell value prompt"}
                     </Button>
                     <Portal>
                       <Modal
@@ -366,7 +410,7 @@ export default function ParserModal() {
                         contentContainerStyle={styles.modal}
                       >
                         <TextInput
-                          label={"Field value prompt"}
+                          label={"Cell value prompt"}
                           value={modalText}
                           onChangeText={(text) => setModalText(text)}
                         />
@@ -415,13 +459,13 @@ export default function ParserModal() {
         >
           <Link
             href={{
-              pathname: `./image-data-modal`,
+              pathname: `./parserDataModal`,
               params: {
                 parserId,
               },
             }}
           >
-            View parser's scanned data
+            View parser's data
           </Link>
         </Button>
       )}
@@ -446,6 +490,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 16,
   },
+  dialog: {
+    fontWeight: "bold",
+  },
+  invalidField: {
+    color: "red",
+  },
   tableTitleContainer: {
     alignItems: "center",
     marginBottom: 10,
@@ -459,10 +509,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 20,
     marginHorizontal: 16,
-  },
-
-  invalidField: {
-    color: "red",
   },
   table: {
     backgroundColor: "white",

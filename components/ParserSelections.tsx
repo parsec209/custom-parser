@@ -1,49 +1,32 @@
 import { useState, useContext, useCallback } from "react";
-import { StyleSheet, View, Alert } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Text, Button, RadioButton } from "react-native-paper";
-import { Link, usePathname } from "expo-router";
+import { Text, Button, RadioButton, Portal, Dialog } from "react-native-paper";
+import { Link, usePathname, useRouter } from "expo-router";
 
 import { SelectedImagesContext } from "../contexts/selectedImagesContext";
 import { getAllParsers, deleteParser } from "../services/postService";
+import { scan } from "../services/scanner";
 
 export default function ParserSelections() {
   const currentPath = usePathname();
+  const router = useRouter();
 
   const { selectedImages } = useContext(SelectedImagesContext);
-
   const [parsers, setParsers] = useState([]);
   const [selectedParserIndex, setSelectedParserIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [dialogIsVisible, setDialogIsVisible] = useState(false);
 
-  //   const scan = async () => {
-  //     try {
-  //       //send inner array string subsection of selectedParser.prompts, and selectedImages, to backend
-  //       //backend returns stringified array of string values
-  //       const stringifiedValues = `['a', 'b', 'c']`;
-  //       // ['d', 'e', 'f']
-  //       // ['g', 'h', 'i']
-  //       const parsedValues = JSON.parse(stringifiedValues);
-  //       const values = parsedValues.map((value) =>
-  //         typeof value !== "string" ? "" : value,
-  //       ); // only for testing, allow null and undefined for cell values
-  //       const imageData = await getImageData(
-  //         { parserId: parsers[selectedParserIndex].id}
-  //       );
-  //       const imageDataUpdatedRows = imageData.data.push(values);
-  //       await updateImageData({
-  //         name: imageData.name,
-  //         fieldNames
-  // : imageData.fields,
-  // rows: imageDataUpdatedRows,
-  // id: imageData.id,
-  //     });
-  //       router.replace(`./table-modal?id=${imageData.id}`);
-  //     } catch (err) {
-  //       alert(err);
-  //       console.error(err);
-  //     }
-  //   };
+  const scanAndReroute = async () => {
+    const parserDataId = await scan(
+      parsers[selectedParserIndex],
+      selectedImages,
+    );
+    router.replace(
+      `./parserDataModal?parserDataId=${parserDataId}&rowHighlighted=true`,
+    );
+  };
 
   const deleteOneAndSetParsers = async (id) => {
     try {
@@ -59,24 +42,6 @@ export default function ParserSelections() {
       setIsLoading(false);
     }
   };
-
-  const createTwoButtonAlert = () =>
-    Alert.alert(
-      "Warning",
-      `This will also permanently delete this parser's image data table. Please check out the data export options first. If you still want to proceed with deletion, click OK.`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "OK",
-          onPress: () => {
-            deleteOneAndSetParsers(parsers[selectedParserIndex].id);
-          },
-        },
-      ],
-    );
 
   const parsersList = parsers?.map((parser, index) => (
     <View style={styles.parserSelection} key={parser.id}>
@@ -142,9 +107,9 @@ export default function ParserSelections() {
             <Link
               href={{
                 pathname:
-                  currentPath === "/parsers-modal"
-                    ? `./parser-modal`
-                    : `../parser-modal`,
+                  currentPath === "/parsersModal"
+                    ? `./parserModal`
+                    : `../parserModal`,
                 params: {
                   parserId:
                     parsers?.length > 0
@@ -159,11 +124,46 @@ export default function ParserSelections() {
           <Button
             icon="minus"
             mode="text"
-            onPress={createTwoButtonAlert}
+            onPress={() => {
+              setDialogIsVisible(true);
+            }}
             disabled={isLoading}
           >
             Delete selected parser
           </Button>
+          <Portal>
+            <Dialog
+              visible={dialogIsVisible}
+              onDismiss={() => {
+                setDialogIsVisible(false);
+              }}
+            >
+              <Dialog.Content>
+                <Text variant="bodyMedium">
+                  This will also permanently delete this parser's data, click OK
+                  to proceed.
+                </Text>
+              </Dialog.Content>
+              <Dialog.Actions>
+                <Button
+                  onPress={() => {
+                    deleteOneAndSetParsers(parsers[selectedParserIndex].id);
+                  }}
+                >
+                  OK
+                </Button>
+              </Dialog.Actions>
+              <Dialog.Actions>
+                <Button
+                  onPress={() => {
+                    setDialogIsVisible(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Dialog.Actions>
+            </Dialog>
+          </Portal>
         </View>
       )}
       <View style={styles.parsersModificationButtons}>
@@ -171,22 +171,22 @@ export default function ParserSelections() {
           <Link
             href={{
               pathname:
-                currentPath === "/parsers-modal"
-                  ? "./parser-modal"
-                  : "../parser-modal",
+                currentPath === "/parsersModal"
+                  ? "./parserModal"
+                  : "../parserModal",
             }}
           >
             Add new parser
           </Link>
         </Button>
       </View>
-      {currentPath === "/parsers-modal" && (
+      {currentPath === "/parsersModal" && (
         <Button
           style={styles.scanButton}
           icon="scan-helper"
           mode="contained"
           buttonColor="blue"
-          // onPress={scan}
+          onPress={scanAndReroute}
           disabled={!(parsers?.length > 0) || isLoading}
         >
           Start scan
