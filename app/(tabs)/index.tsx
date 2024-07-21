@@ -16,7 +16,6 @@ export default function ScannerTab() {
     SelectedImagesContext,
   ); // as GamesContextType (example), type is defined in context file;
 
-  //console.log(selectedImages)
 
   const [image1, setImage1] = useState(null);
   const [image2, setImage2] = useState(null);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import { StyleSheet, View, ScrollView } from "react-native";
 
 import {
@@ -25,12 +25,13 @@ export default function ParserDataModal() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
-  const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
+  const [fetchedParserId, setFetchedParserId] = useState(null);
+  const [modalHeaderIndex, setModalHeaderIndex] = useState(null); //string or null
+  const [modalRowAndCellIndex, setModalRowAndCellIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [modalRowIndex, setModalRowIndex] = useState(null); //string or null
-  const [sortMenuFieldNameIndex, setSortMenuFieldNameIndex] = useState(null); //string or null
+  const [sortMenuHeaderIndex, setSortMenuHeaderIndex] = useState(null); //string or null
   const [dialogRowIndex, setDialogRowIndex] = useState(null); //string or null
-  const [fieldNames, setFieldNames] = useState([""]);
+  const [headers, setHeaders] = useState([""]);
   const [rows, setRows] = useState([]);
   const [images, setImages] = useState([]); // [[null || string, null || string]
   const [image1, setImage1] = useState(null);
@@ -68,10 +69,9 @@ export default function ParserDataModal() {
 
   const saveData = async () => {
     setIsLoading(true);
-    //delayedFunction();
     try {
       await updateParserData({
-        fieldNames,
+        headers,
         parserDataRows: rows,
         images,
         parserDataId,
@@ -91,7 +91,8 @@ export default function ParserDataModal() {
       setIsLoading(true);
       const parserData = await getParserData({ parserDataId, parserId });
       setName(parserData.name);
-      setFieldNames(parserData.fieldNames);
+      setFetchedParserId(parserData.parserId);
+      setHeaders(parserData.headers);
       setRows(parserData.parserDataRows);
       setImages(parserData.images);
       setIsLoading(false);
@@ -114,7 +115,7 @@ export default function ParserDataModal() {
     }
     const updatedRows = [...rows];
     const updatedImages = [...images];
-    const newRow = fieldNames.map(() => {
+    const newRow = headers.map(() => {
       return "";
     });
     const newImagePair = [null, null];
@@ -157,18 +158,18 @@ export default function ParserDataModal() {
     setPage(0);
   };
 
-  const sortColumn = (fieldNameIndex, sortDirection) => {
+  const sortColumn = (headerIndex, sortDirection) => {
     if (lastRowIsHighlighted) {
       setLastRowIsHighlighted(false);
     }
     const rowsWithIndices = rows.map((value, index) => ({ value, index }));
     if (sortDirection === "ascending") {
       rowsWithIndices.sort((a, b) =>
-        a.value[fieldNameIndex].localeCompare(b.value[fieldNameIndex]),
+        a.value[headerIndex].localeCompare(b.value[headerIndex]),
       );
     } else if (sortDirection === "descending") {
       rowsWithIndices.sort((a, b) =>
-        b.value[fieldNameIndex].localeCompare(a.value[fieldNameIndex]),
+        b.value[headerIndex].localeCompare(a.value[headerIndex]),
       );
     }
     const updatedRows = rowsWithIndices.map((item) => item.value);
@@ -228,12 +229,6 @@ export default function ParserDataModal() {
         >
           Reset rows
         </Button>
-        {/* <Text variant="bodySmall">
-          ***To delete a specific row, long press that row's first cell***
-        </Text>
-        <Text variant="bodySmall">
-          ***To sort by a specific column, long press that column's header***
-        </Text> */}
         <IconButton
           icon="help-circle-outline"
           size={20}
@@ -264,7 +259,7 @@ export default function ParserDataModal() {
         </Portal>
       </View>
       <View style={styles.tableTitleContainer}>
-        <Text variant="titleMedium">Parser data</Text>
+        <Text variant="titleMedium">Headers and scanned data</Text>
       </View>
       <View>
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
@@ -273,46 +268,46 @@ export default function ParserDataModal() {
               <View style={styles.cell}>
                 <Text variant="bodySmall">Images</Text>
               </View>
-              {fieldNames?.map((fieldName, fieldNameIndex) => (
-                <View key={fieldNameIndex} style={styles.cell}>
+              {headers?.map((header, headerIndex) => (
+                <View key={headerIndex} style={[styles.cell, styles.header]}>
                   <Menu
-                    visible={sortMenuFieldNameIndex === fieldNameIndex}
+                    visible={sortMenuHeaderIndex === headerIndex}
                     onDismiss={() => {
-                      setSortMenuFieldNameIndex(null);
+                      setSortMenuHeaderIndex(null);
                     }}
                     anchor={
                       <Button
                         mode="text"
                         disabled={isLoading}
                         onPress={() => {
-                          setModalFieldNameIndex(fieldNameIndex);
-                          setModalText(fieldName);
+                          setModalHeaderIndex(headerIndex);
+                          setModalText(header);
                         }}
                         onLongPress={() => {
-                          setSortMenuFieldNameIndex(fieldNameIndex);
+                          setSortMenuHeaderIndex(headerIndex);
                         }}
                         labelStyle={{
                           textDecorationLine: "underline",
                           color: "blue",
                         }}
                       >
-                        {fieldName?.length > 20
-                          ? fieldName.substring(0, 20) + "..."
-                          : fieldName}
+                        {header?.length > 20
+                          ? header.substring(0, 20) + "..."
+                          : header}
                       </Button>
                     }
                   >
                     <Menu.Item
                       onPress={() => {
-                        sortColumn(fieldNameIndex, "ascending");
-                        setSortMenuFieldNameIndex(null);
+                        sortColumn(headerIndex, "ascending");
+                        setSortMenuHeaderIndex(null);
                       }}
                       title="Sort ascending"
                     />
                     <Menu.Item
                       onPress={() => {
-                        sortColumn(fieldNameIndex, "descending");
-                        setSortMenuFieldNameIndex(null);
+                        sortColumn(headerIndex, "descending");
+                        setSortMenuHeaderIndex(null);
                       }}
                       title="Sort descending"
                     />
@@ -320,9 +315,9 @@ export default function ParserDataModal() {
 
                   <Portal>
                     <Modal
-                      visible={modalFieldNameIndex === fieldNameIndex}
+                      visible={modalHeaderIndex === headerIndex}
                       onDismiss={() => {
-                        setModalFieldNameIndex(null);
+                        setModalHeaderIndex(null);
                       }}
                       contentContainerStyle={styles.modal}
                     >
@@ -341,7 +336,7 @@ export default function ParserDataModal() {
                 <View style={styles.cell}>
                   <Text style={styles.emptyRowMsg}>No rows added yet</Text>
                 </View>
-                {fieldNames?.map((_, cellIndex) => (
+                {headers?.map((_, cellIndex) => (
                   <View key={cellIndex} style={styles.cell}></View>
                 ))}
               </View>
@@ -432,8 +427,6 @@ export default function ParserDataModal() {
                     </Portal>
                   </View>
                   {row?.map((cellData, cellIndex) => (
-                    //if last row and lastRowIsHighlighted --- styles.cell = blue (unhighlight when doing any action on the rows or columns)
-
                     <View
                       key={cellIndex}
                       style={[
@@ -447,7 +440,7 @@ export default function ParserDataModal() {
                         mode="text"
                         disabled={isLoading}
                         onPress={() => {
-                          setModalFieldDataIndex({ rowIndex, cellIndex });
+                          setModalRowAndCellIndex({ rowIndex, cellIndex });
                           setModalText(cellData);
                         }}
                         labelStyle={{
@@ -464,12 +457,12 @@ export default function ParserDataModal() {
                       <Portal>
                         <Modal
                           visible={
-                            modalFieldDataIndex !== null &&
-                            modalFieldDataIndex.rowIndex === rowIndex &&
-                            modalFieldDataIndex.cellIndex === cellIndex
+                            modalRowAndCellIndex !== null &&
+                            modalRowAndCellIndex.rowIndex === rowIndex &&
+                            modalRowAndCellIndex.cellIndex === cellIndex
                           }
                           onDismiss={() => {
-                            setModalFieldDataIndex(null);
+                            setModalRowAndCellIndex(null);
                             updateCell(rowIndex, cellIndex, modalText);
                           }}
                           contentContainerStyle={styles.modal}
@@ -513,6 +506,26 @@ export default function ParserDataModal() {
           Save
         </Button>
       </View>
+      <Button
+        labelStyle={{
+          textDecorationLine: "underline",
+          color: "blue",
+        }}
+        mode="text"
+        disabled={isLoading}
+        onPress={() => {}}
+      >
+        <Link
+          href={{
+            pathname: `./parserModal`,
+            params: {
+              parserId: fetchedParserId,
+            },
+          }}
+        >
+          View parser
+        </Link>
+      </Button>
     </View>
   );
 }
@@ -579,6 +592,9 @@ const styles = StyleSheet.create({
     borderColor: "grey",
     justifyContent: "center",
     alignItems: "center",
+  },
+  header: {
+    backgroundColor: "lightgrey",
   },
   highlightedCell: {
     color: "lightgreen",

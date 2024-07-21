@@ -34,10 +34,10 @@ export default function ParserModal() {
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [modalFieldNameIndex, setModalFieldNameIndex] = useState(null); //string or null
-  const [modalFieldDataIndex, setModalFieldDataIndex] = useState(null); //{ rowIndex, cellIndex } || null
+  const [modalHeaderIndex, setModalHeaderIndex] = useState(null); //string or null
+  const [modalRowAndCellIndex, setModalRowAndCellIndex] = useState(null); //{ rowIndex, cellIndex } || null
   const [dialogColumnIndex, setDialogColumnIndex] = useState(null); //string or null
-  const [fieldNames, setFieldNames] = useState([""]);
+  const [headers, setHeaders] = useState([""]);
   const [rows, setRows] = useState([[""]]);
   const [parserDataRows, setParserDataRows] = useState([]); //ONLY EDITED WHEN DELETING COLUMN
   const [images, setImages] = useState([]); //ONLY EDITED WHEN DELETING LAST REMAINING COLUMN
@@ -52,21 +52,13 @@ export default function ParserModal() {
   const from = page * itemsPerPage;
   const to = Math.min((page + 1) * itemsPerPage, rows.length);
 
-  // const delayedFunction = () => {
-  //   setTimeout(() => {
-  //     // Your function goes here
-  //     setIsLoading(false);
-  //     console.log("Button pressed with 5 second delay!");
-  //   }, 5000); // Delay of 5 seconds
-  // };
-
   const getAndSetParserTextFields = async () => {
     try {
       setIsLoading(true);
       const parser = await getParser({ parserId });
       const parserData = await getParserData({ parserId });
       setName(parser.name);
-      setFieldNames(parser.fieldNames);
+      setHeaders(parser.headers);
       setRows(parser.parserRows);
       setParserDataRows(parserData.parserDataRows);
       setImages(parserData.images);
@@ -78,8 +70,8 @@ export default function ParserModal() {
     }
   };
 
-  const arefieldNamesValid = () => {
-    return !fieldNames.includes("");
+  const areHeadersValid = () => {
+    return !headers.includes("");
   };
 
   const areRowsValid = () => {
@@ -88,24 +80,23 @@ export default function ParserModal() {
 
   const saveData = async () => {
     setIsLoading(true);
-    //delayedFunction();
-    if (name && arefieldNamesValid() && areRowsValid()) {
+    if (name && areHeadersValid() && areRowsValid()) {
       try {
         if (parserId) {
-          await updateParser({ name, fieldNames, parserRows: rows, parserId });
+          await updateParser({ name, headers, parserRows: rows, parserId });
           await updateParserData({
             name,
-            fieldNames,
+            headers,
             parserDataRows,
             images,
             parserId,
           });
         } else {
-          await postParser({ name, fieldNames, parserRows: rows });
+          await postParser({ name, headers, parserRows: rows });
           const { parserId } = await getParser({ name });
           await postParserData({
             name,
-            fieldNames,
+            headers,
             parserDataRows: [],
             images: [],
             parserId,
@@ -124,10 +115,10 @@ export default function ParserModal() {
     }
   };
 
-  const updateFieldNameText = (fieldNameIndex, text) => {
-    const updatedFieldNames = [...fieldNames];
-    updatedFieldNames[fieldNameIndex] = text;
-    setFieldNames(updatedFieldNames);
+  const updateHeaderText = (fieldNameIndex, text) => {
+    const updatedHeaders = [...headers];
+    updatedHeaders[fieldNameIndex] = text;
+    setHeaders(updatedHeaders);
   };
 
   const updatePrompt = (rowIndex, cellIndex, text) => {
@@ -137,21 +128,21 @@ export default function ParserModal() {
   };
 
   const addColumn = () => {
-    const updatedFieldNames = [...fieldNames, ""];
+    const updatedHeaders = [...headers, ""];
     const updatedRows = rows.map((row) => {
       return [...row, ""];
     });
     const updatedParserDataRows = parserDataRows.map((row) => {
       return [...row, ""];
     });
-    setFieldNames(updatedFieldNames);
+    setHeaders(updatedHeaders);
     setRows(updatedRows);
     setParserDataRows(updatedParserDataRows);
   };
 
   const deleteLastColumn = () => {
-    let updatedFieldNames = [...fieldNames];
-    updatedFieldNames.pop();
+    let updatedHeaders = [...headers];
+    updatedHeaders.pop();
     let updatedRows = rows.map((row) => {
       row.pop();
       return row;
@@ -161,21 +152,21 @@ export default function ParserModal() {
       return row;
     });
     let updatedImages = [...images];
-    if (!updatedFieldNames.length) {
-      updatedFieldNames = [""];
+    if (!updatedHeaders.length) {
+      updatedHeaders = [""];
       updatedRows = [[""]];
       updatedParserDataRows = [];
       updatedImages = [];
     }
-    setFieldNames(updatedFieldNames);
+    setHeaders(updatedHeaders);
     setRows(updatedRows);
     setParserDataRows(updatedParserDataRows);
     setImages(updatedImages);
   };
 
   const deleteColumn = (columnIndex) => {
-    let updatedFieldNames = [...fieldNames];
-    updatedFieldNames.splice(columnIndex, 1);
+    let updatedHeaders = [...headers];
+    updatedHeaders.splice(columnIndex, 1);
 
     let updatedRows = rows.map((row) => {
       row.splice(columnIndex, 1);
@@ -186,13 +177,13 @@ export default function ParserModal() {
       return row;
     });
     let updatedImages = [...images];
-    if (!updatedFieldNames.length) {
-      updatedFieldNames = [""];
+    if (!updatedHeaders.length) {
+      updatedHeaders = [""];
       updatedRows = [[""]];
       updatedParserDataRows = [];
       updatedImages = [];
     }
-    setFieldNames(updatedFieldNames);
+    setHeaders(updatedHeaders);
     setRows(updatedRows);
     setParserDataRows(updatedParserDataRows);
     setImages(updatedImages);
@@ -280,8 +271,8 @@ export default function ParserModal() {
         </Portal>
       </View>
       <View style={styles.tableTitleContainer}>
-        <Text variant="titleMedium">Table headers & prompts</Text>
-        {isValidated && (!arefieldNamesValid() || !areRowsValid()) && (
+        <Text variant="titleMedium">Headers and prompts table</Text>
+        {isValidated && (!areHeadersValid() || !areRowsValid()) && (
           <Text variant="bodySmall" style={styles.invalidField}>
             Please add text to any red-colored table fields
           </Text>
@@ -291,35 +282,35 @@ export default function ParserModal() {
         <ScrollView horizontal contentContainerStyle={styles.scrollView}>
           <View style={styles.table}>
             <View style={styles.row}>
-              {fieldNames?.map((fieldName, fieldNameIndex) => (
-                <View key={fieldNameIndex} style={styles.cell}>
+              {headers?.map((header, headerIndex) => (
+                <View key={headerIndex} style={[styles.cell, styles.header]}>       
                   <Button
                     mode="text"
                     disabled={isLoading}
                     onPress={() => {
-                      setModalFieldNameIndex(fieldNameIndex);
-                      setModalText(fieldName);
+                      setModalHeaderIndex(headerIndex);
+                      setModalText(header);
                     }}
                     onLongPress={() => {
-                      setDialogColumnIndex(fieldNameIndex);
+                      setDialogColumnIndex(headerIndex);
                     }}
                     labelStyle={{
                       textDecorationLine: "underline",
-                      color: !isValidated || fieldName ? "blue" : "red",
+                      color: !isValidated || header ? "blue" : "red",
                     }}
                   >
-                    {fieldName
-                      ? fieldName.length > 20
-                        ? fieldName.substring(0, 20) + "..."
-                        : fieldName
+                    {header
+                      ? header.length > 20
+                        ? header.substring(0, 20) + "..."
+                        : header
                       : "Header name"}
                   </Button>
                   <Portal>
                     <Modal
-                      visible={modalFieldNameIndex === fieldNameIndex}
+                      visible={modalHeaderIndex === headerIndex}
                       onDismiss={() => {
-                        setModalFieldNameIndex(null);
-                        updateFieldNameText(fieldNameIndex, modalText);
+                        setModalHeaderIndex(null);
+                        updateHeaderText(headerIndex, modalText);
                       }}
                       contentContainerStyle={styles.modal}
                     >
@@ -335,7 +326,7 @@ export default function ParserModal() {
 
                   <Portal>
                     <Dialog
-                      visible={dialogColumnIndex === fieldNameIndex}
+                      visible={dialogColumnIndex === headerIndex}
                       onDismiss={() => {
                         setDialogColumnIndex(null);
                       }}
@@ -353,7 +344,7 @@ export default function ParserModal() {
                       <Dialog.Actions>
                         <Button
                           onPress={() => {
-                            deleteColumn(fieldNameIndex);
+                            deleteColumn(headerIndex);
                             setDialogColumnIndex(null);
                           }}
                         >
@@ -382,7 +373,7 @@ export default function ParserModal() {
                       mode="text"
                       disabled={isLoading}
                       onPress={() => {
-                        setModalFieldDataIndex({ rowIndex, cellIndex });
+                        setModalRowAndCellIndex({ rowIndex, cellIndex });
                         setModalText(prompt);
                       }}
                       labelStyle={{
@@ -399,12 +390,12 @@ export default function ParserModal() {
                     <Portal>
                       <Modal
                         visible={
-                          modalFieldDataIndex !== null &&
-                          modalFieldDataIndex.rowIndex === rowIndex &&
-                          modalFieldDataIndex.cellIndex === cellIndex
+                          modalRowAndCellIndex !== null &&
+                          modalRowAndCellIndex.rowIndex === rowIndex &&
+                          modalRowAndCellIndex.cellIndex === cellIndex
                         }
                         onDismiss={() => {
-                          setModalFieldDataIndex(null);
+                          setModalRowAndCellIndex(null);
                           updatePrompt(rowIndex, cellIndex, modalText);
                         }}
                         contentContainerStyle={styles.modal}
@@ -528,6 +519,9 @@ const styles = StyleSheet.create({
     borderColor: "grey",
     justifyContent: "center",
     alignItems: "flex-start",
+  },
+  header: {
+    backgroundColor: "lightgrey"
   },
   pagination: {
     backgroundColor: "white",

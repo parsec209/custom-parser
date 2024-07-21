@@ -26,7 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="parserData"
         options={{
-          title: "Parser data",
+          title: "Data",
           tabBarIcon: ({ color }) => (
             <Icon source="table" color={color} size={20} />
           ),

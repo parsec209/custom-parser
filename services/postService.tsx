@@ -139,6 +139,7 @@ export const getParserData = async (query) => {
   );
   return {
     parserDataId: result.id.toString(),
+    parserId: result.parser_id.toString(),
     name: result.name,
     headers: JSON.parse(result.headers),
     parserDataRows: JSON.parse(result.rows),
