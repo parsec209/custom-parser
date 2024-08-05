@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import { StyleSheet, View, ScrollView } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 import {
   Text,
-  DataTable,
+  // DataTable,
   Button,
   Portal,
   Modal,
@@ -17,12 +18,13 @@ import { getParserData, updateParserData } from "../services/postService";
 import ImageSelection from "../components/ImageSelection";
 
 export default function ParserDataModal() {
-  const { parserDataId, parserId, rowHighlighted } = useLocalSearchParams<{
+  let { parserDataId, parserId, rowHighlighted } = useLocalSearchParams<{
     parserDataId?: string;
     parserId?: string;
     rowHighlighted?: string;
   }>();
   const router = useRouter();
+  const scrollViewRef = useRef<ScrollView | null>(null);
 
   const [name, setName] = useState("");
   const [fetchedParserId, setFetchedParserId] = useState(null);
@@ -36,19 +38,18 @@ export default function ParserDataModal() {
   const [images, setImages] = useState([]); // [[null || string, null || string]
   const [image1, setImage1] = useState(null);
   const [image2, setImage2] = useState(null);
-  const [page, setPage] = useState<number>(0);
-  const [numberOfItemsPerPageList] = useState([2, 3, 4]);
-  const [itemsPerPage, onItemsPerPageChange] = useState(4);
+  // const [page, setPage] = useState<number>(0);
+  // const [numberOfItemsPerPageList] = useState([2, 3, 4]);
+  // const [itemsPerPage, onItemsPerPageChange] = useState(4);
   const [modalText, setModalText] = useState("");
   const [isHintVisible, setIsHintVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastRowIsHighlighted, setLastRowIsHighlighted] = useState(
-    Boolean(rowHighlighted),
-  );
+  const [lastRowIsHighlighted, setLastRowIsHighlighted] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
 
-  const from = page * itemsPerPage;
-  const to = Math.min((page + 1) * itemsPerPage, rows.length);
-  const numberOfPages = Math.ceil(rows.length / itemsPerPage);
+  // const from = page * itemsPerPage;
+  // const to = Math.min((page + 1) * itemsPerPage, rows.length);
+  // const numberOfPages = Math.ceil(rows.length / itemsPerPage);
 
   const updateRowImages = (rowIndex) => {
     const updatedImages = [...images];
@@ -155,7 +156,7 @@ export default function ParserDataModal() {
     }
     setRows([]);
     setImages([]);
-    setPage(0);
+    // setPage(0);
   };
 
   const sortColumn = (headerIndex, sortDirection) => {
@@ -178,26 +179,37 @@ export default function ParserDataModal() {
     setImages(updatedImages);
   };
 
-  useEffect(() => {
-    if (lastRowIsHighlighted) {
-      setPage(numberOfPages);
-    } else {
-      setPage(0);
-    }
-  }, [itemsPerPage]);
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     const isRowHighlighted = Boolean(rowHighlighted);
+  //     if (isRowHighlighted) {
+  //       setLastRowIsHighlighted(isRowHighlighted);
+  //       router.setParams({ rowHighlighted: "false" });
+  //     }
+  //   }, [rowHighlighted]),
+  // );
 
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      if (!isMounted) {
-        return;
-      }
-      await getAndSetParserDataFields();
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const isRowHighlighted = Boolean(rowHighlighted);
+      setLastRowIsHighlighted(isRowHighlighted);
+      if (isRowHighlighted && scrollViewRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current.scrollTo({ y: contentHeight, animated: true });
+        }, 200);
+      } 
+    }, [rowHighlighted, contentHeight]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      getAndSetParserDataFields();
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
 
   return (
     <View style={[styles.container, { opacity: isLoading ? 0.5 : 1 }]}>
@@ -261,177 +273,99 @@ export default function ParserDataModal() {
       <View style={styles.tableTitleContainer}>
         <Text variant="titleMedium">Headers and scanned data</Text>
       </View>
-      <View>
-        <ScrollView horizontal contentContainerStyle={styles.scrollView}>
-          <View style={styles.table}>
-            <View style={styles.row}>
-              <View style={styles.cell}>
-                <Text variant="bodySmall">Images</Text>
-              </View>
-              {headers?.map((header, headerIndex) => (
-                <View key={headerIndex} style={[styles.cell, styles.header]}>
-                  <Menu
-                    visible={sortMenuHeaderIndex === headerIndex}
-                    onDismiss={() => {
-                      setSortMenuHeaderIndex(null);
-                    }}
-                    anchor={
-                      <Button
-                        mode="text"
-                        disabled={isLoading}
-                        onPress={() => {
-                          setModalHeaderIndex(headerIndex);
-                          setModalText(header);
-                        }}
-                        onLongPress={() => {
-                          setSortMenuHeaderIndex(headerIndex);
-                        }}
-                        labelStyle={{
-                          textDecorationLine: "underline",
-                          color: "blue",
-                        }}
-                      >
-                        {header?.length > 20
-                          ? header.substring(0, 20) + "..."
-                          : header}
-                      </Button>
-                    }
-                  >
-                    <Menu.Item
-                      onPress={() => {
-                        sortColumn(headerIndex, "ascending");
-                        setSortMenuHeaderIndex(null);
-                      }}
-                      title="Sort ascending"
-                    />
-                    <Menu.Item
-                      onPress={() => {
-                        sortColumn(headerIndex, "descending");
-                        setSortMenuHeaderIndex(null);
-                      }}
-                      title="Sort descending"
-                    />
-                  </Menu>
-
-                  <Portal>
-                    <Modal
-                      visible={modalHeaderIndex === headerIndex}
-                      onDismiss={() => {
-                        setModalHeaderIndex(null);
-                      }}
-                      contentContainerStyle={styles.modal}
-                    >
-                      <TextInput
-                        label={"Header name"}
-                        value={modalText}
-                        disabled={true}
-                      />
-                    </Modal>
-                  </Portal>
-                </View>
-              ))}
-            </View>
-            {rows?.length === 0 ? (
+      <View style={styles.scrollContainer}>
+        <ScrollView
+          ref={scrollViewRef}
+          // style={styles.scrollView}
+          onContentSizeChange={(width, height) => setContentHeight(height)}
+        >
+          {/* <ScrollView horizontal contentContainerStyle={styles.horizontalScrollView}> */}
+          <ScrollView horizontal>
+            <View style={styles.table}>
               <View style={styles.row}>
                 <View style={styles.cell}>
-                  <Text style={styles.emptyRowMsg}>No rows added yet</Text>
+                  <Text variant="bodySmall">Scanned images</Text>
                 </View>
-                {headers?.map((_, cellIndex) => (
-                  <View key={cellIndex} style={styles.cell}></View>
-                ))}
-              </View>
-            ) : (
-              rows?.slice(from, to).map((row, rowIndex) => (
-                <View key={rowIndex} style={styles.row}>
-                  <View style={styles.cell}>
-                    <Button
-                      mode="text"
-                      disabled={isLoading}
-                      onPress={() => {
-                        setModalRowIndex(rowIndex);
-                        setImage1(images[rowIndex][0]);
-                        setImage2(images[rowIndex][1]);
+                {headers?.map((header, headerIndex) => (
+                  <View key={headerIndex} style={[styles.cell, styles.header]}>
+                    <Menu
+                      visible={sortMenuHeaderIndex === headerIndex}
+                      onDismiss={() => {
+                        setSortMenuHeaderIndex(null);
                       }}
-                      onLongPress={() => {
-                        setDialogRowIndex(rowIndex);
-                      }}
-                      labelStyle={{
-                        textDecorationLine: "underline",
-                        color: "blue",
-                      }}
+                      anchor={
+                        <Button
+                          mode="text"
+                          disabled={isLoading}
+                          onPress={() => {
+                            setModalHeaderIndex(headerIndex);
+                            setModalText(header);
+                          }}
+                          onLongPress={() => {
+                            setSortMenuHeaderIndex(headerIndex);
+                          }}
+                          labelStyle={{
+                            textDecorationLine: "underline",
+                            color: "blue",
+                          }}
+                        >
+                          {header?.length > 20
+                            ? header.substring(0, 20) + "..."
+                            : header}
+                        </Button>
+                      }
                     >
-                      {images?.length > 0 &&
-                      !images[rowIndex].some(
-                        (image) => typeof image === "string",
-                      )
-                        ? "Add image"
-                        : "View image"}
-                    </Button>
+                      <Menu.Item
+                        onPress={() => {
+                          sortColumn(headerIndex, "ascending");
+                          setSortMenuHeaderIndex(null);
+                        }}
+                        title="Sort ascending"
+                      />
+                      <Menu.Item
+                        onPress={() => {
+                          sortColumn(headerIndex, "descending");
+                          setSortMenuHeaderIndex(null);
+                        }}
+                        title="Sort descending"
+                      />
+                    </Menu>
 
                     <Portal>
                       <Modal
-                        visible={modalRowIndex === rowIndex}
+                        visible={modalHeaderIndex === headerIndex}
                         onDismiss={() => {
-                          updateRowImages(rowIndex);
-                          setModalRowIndex(null);
+                          setModalHeaderIndex(null);
                         }}
-                        contentContainerStyle={[
-                          styles.modal,
-                          styles.imageModal,
-                        ]}
+                        contentContainerStyle={styles.modal}
                       >
-                        <View style={styles.imageSelections}>
-                          <ImageSelection
-                            image={image1}
-                            handleImageUpdate={handleImage1Update}
-                          />
-                          <ImageSelection
-                            image={image2}
-                            handleImageUpdate={handleImage2Update}
-                          />
-                        </View>
+                        <TextInput
+                          label={"Header name"}
+                          value={modalText}
+                          disabled={true}
+                        />
                       </Modal>
                     </Portal>
-
-                    <Portal>
-                      <Dialog
-                        visible={dialogRowIndex === rowIndex}
-                        onDismiss={() => {
-                          setDialogRowIndex(null);
-                        }}
-                      >
-                        <Dialog.Content>
-                          <Text variant="bodyMedium">
-                            Ok to delete this entire row?
-                          </Text>
-                        </Dialog.Content>
-                        <Dialog.Actions>
-                          <Button
-                            onPress={() => {
-                              deleteRow(rowIndex);
-                            }}
-                          >
-                            OK
-                          </Button>
-                        </Dialog.Actions>
-                        <Dialog.Actions>
-                          <Button
-                            onPress={() => {
-                              setDialogRowIndex(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </Dialog.Actions>
-                      </Dialog>
-                    </Portal>
                   </View>
-                  {row?.map((cellData, cellIndex) => (
+                ))}
+              </View>
+              {rows?.length === 0 ? (
+                <View style={styles.row}>
+                  <View style={styles.cell}>
+                    <Text style={styles.emptyRowMsg}>No rows added yet</Text>
+                  </View>
+                  {headers?.map((_, cellIndex) => (
+                    <View key={cellIndex} style={styles.cell}></View>
+                  ))}
+                </View>
+              ) : (
+                //rows?.slice(from, to).map((row, rowIndex) => (
+                rows?.map((row, rowIndex) => (
+                  <View key={rowIndex} style={styles.row}>
                     <View
-                      key={cellIndex}
                       style={[
                         styles.cell,
-                        rowIndex === row.length - 1 &&
+                        rowIndex === rows.length - 1 &&
                           lastRowIsHighlighted &&
                           styles.highlightedCell,
                       ]}
@@ -440,49 +374,140 @@ export default function ParserDataModal() {
                         mode="text"
                         disabled={isLoading}
                         onPress={() => {
-                          setModalRowAndCellIndex({ rowIndex, cellIndex });
-                          setModalText(cellData);
+                          setModalRowIndex(rowIndex);
+                          setImage1(images[rowIndex][0]);
+                          setImage2(images[rowIndex][1]);
+                        }}
+                        onLongPress={() => {
+                          setDialogRowIndex(rowIndex);
                         }}
                         labelStyle={{
                           textDecorationLine: "underline",
                           color: "blue",
                         }}
                       >
-                        {cellData
-                          ? cellData.length > 20
-                            ? cellData.substring(0, 20) + "..."
-                            : cellData
-                          : "..."}
+                        {images?.length > 0 &&
+                        !images[rowIndex].some(
+                          (image) => typeof image === "string",
+                        )
+                          ? "Add image"
+                          : "View image"}
                       </Button>
                       <Portal>
                         <Modal
-                          visible={
-                            modalRowAndCellIndex !== null &&
-                            modalRowAndCellIndex.rowIndex === rowIndex &&
-                            modalRowAndCellIndex.cellIndex === cellIndex
-                          }
+                          visible={modalRowIndex === rowIndex}
                           onDismiss={() => {
-                            setModalRowAndCellIndex(null);
-                            updateCell(rowIndex, cellIndex, modalText);
+                            updateRowImages(rowIndex);
+                            setModalRowIndex(null);
                           }}
-                          contentContainerStyle={styles.modal}
+                          contentContainerStyle={[
+                            styles.modal,
+                            styles.imageModal,
+                          ]}
                         >
-                          <TextInput
-                            label={"Cell value"}
-                            value={modalText}
-                            onChangeText={(text) => setModalText(text)}
-                          />
+                          <View style={styles.imageSelections}>
+                            <ImageSelection
+                              image={image1}
+                              handleImageUpdate={handleImage1Update}
+                            />
+                            <ImageSelection
+                              image={image2}
+                              handleImageUpdate={handleImage2Update}
+                            />
+                          </View>
                         </Modal>
                       </Portal>
+                      <Portal>
+                        <Dialog
+                          visible={dialogRowIndex === rowIndex}
+                          onDismiss={() => {
+                            setDialogRowIndex(null);
+                          }}
+                        >
+                          <Dialog.Content>
+                            <Text variant="bodyMedium">
+                              Ok to delete this entire row?
+                            </Text>
+                          </Dialog.Content>
+                          <Dialog.Actions>
+                            <Button
+                              onPress={() => {
+                                deleteRow(rowIndex);
+                              }}
+                            >
+                              OK
+                            </Button>
+                          </Dialog.Actions>
+                          <Dialog.Actions>
+                            <Button
+                              onPress={() => {
+                                setDialogRowIndex(null);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </Dialog.Actions>
+                        </Dialog>
+                      </Portal>
                     </View>
-                  ))}
-                </View>
-              ))
-            )}
-          </View>
+                    {row?.map((cellData, cellIndex) => (
+                      <View
+                        key={cellIndex}
+                        style={[
+                          styles.cell,
+                          rowIndex === rows.length - 1 &&
+                            lastRowIsHighlighted &&
+                            styles.highlightedCell,
+                        ]}
+                      >
+                        <Button
+                          mode="text"
+                          disabled={isLoading}
+                          onPress={() => {
+                            setModalRowAndCellIndex({ rowIndex, cellIndex });
+                            setModalText(cellData);
+                          }}
+                          labelStyle={{
+                            textDecorationLine: "underline",
+                            color: "blue",
+                          }}
+                        >
+                          {cellData
+                            ? cellData.length > 20
+                              ? cellData.substring(0, 20) + "..."
+                              : cellData
+                            : "..."}
+                        </Button>
+                        <Portal>
+                          <Modal
+                            visible={
+                              modalRowAndCellIndex !== null &&
+                              modalRowAndCellIndex.rowIndex === rowIndex &&
+                              modalRowAndCellIndex.cellIndex === cellIndex
+                            }
+                            onDismiss={() => {
+                              setModalRowAndCellIndex(null);
+                              updateCell(rowIndex, cellIndex, modalText);
+                            }}
+                            contentContainerStyle={styles.modal}
+                          >
+                            <TextInput
+                              label={"Cell value"}
+                              value={modalText}
+                              onChangeText={(text) => setModalText(text)}
+                            />
+                          </Modal>
+                        </Portal>
+                      </View>
+                    ))}
+                  </View>
+                ))
+              )}
+            </View>
+          </ScrollView>
         </ScrollView>
 
-        <DataTable.Pagination
+        {/* <DataTable.Pagination
           style={styles.pagination}
           page={page}
           numberOfPages={numberOfPages}
@@ -493,7 +518,7 @@ export default function ParserDataModal() {
           onItemsPerPageChange={onItemsPerPageChange}
           showFastPaginationControls
           selectPageDropdownLabel={"Rows per page"}
-        />
+        /> */}
       </View>
       <View style={styles.saveButtonContainer}>
         <Button
@@ -554,11 +579,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  scrollView: {
-    flexGrow: 1,
-    marginBottom: 10,
-    paddingHorizontal: 16,
+  scrollContainer: {
+    // flex: 1,
+    height: 200, // MUST
+    marginBottom: 10, //MUST
+    paddingHorizontal: 16, //MUST
   },
+  // scrollView: {
+  // height: 200,
+  // flexGrow: 1,
+  // marginBottom: 10,
+  // paddingHorizontal: 16
+  // },
+  // horizontalScrollView: {
+  //   flexDirection: 'row',
+  // },
   modal: {
     backgroundColor: "white",
     padding: 20,
@@ -597,17 +632,18 @@ const styles = StyleSheet.create({
     backgroundColor: "lightgrey",
   },
   highlightedCell: {
-    color: "lightgreen",
+    backgroundColor: "lightgreen",
   },
-  pagination: {
-    backgroundColor: "white",
-    marginBottom: 20,
-    marginHorizontal: 16,
-  },
+  // pagination: {
+  //   backgroundColor: "white",
+  //   marginBottom: 20,
+  //   marginHorizontal: 16,
+  // },
   saveButtonContainer: {
     alignItems: "center",
   },
   saveButton: {
     width: "60%",
+    marginVertical: 10,
   },
 });

@@ -12,20 +12,34 @@ export default function ParserSelections() {
   const currentPath = usePathname();
   const router = useRouter();
 
-  const { selectedImages } = useContext(SelectedImagesContext);
+  const { selectedImages, setSelectedImages } = useContext(SelectedImagesContext);
   const [parsers, setParsers] = useState([]);
   const [selectedParserIndex, setSelectedParserIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [dialogIsVisible, setDialogIsVisible] = useState(false);
 
   const scanAndReroute = async () => {
-    const parserDataId = await scan(
-      parsers[selectedParserIndex],
-      selectedImages,
-    );
-    router.replace(
-      `./parserDataModal?parserDataId=${parserDataId}&rowHighlighted=true`,
-    );
+    try {
+      setIsLoading(true);
+      const parserDataId = await scan(
+        parsers[selectedParserIndex],
+        selectedImages,
+      );
+      setSelectedImages([null, null])
+      router.replace(
+        `./parserDataModal?parserDataId=${parserDataId}&rowHighlighted=true`,
+      );
+    } catch (err) {
+      setIsLoading(false);
+      console.error(err);
+      if (err.response) {
+        alert(err.response.data?.message);
+      } else if (err.request) {
+        alert("No response was received");
+      } else {
+        alert(err.message);
+      }
+    }
   };
 
   const deleteOneAndSetParsers = async (id) => {

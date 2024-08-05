@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   KeyboardAvoidingView,
   StyleSheet,
@@ -9,7 +10,7 @@ import { useLocalSearchParams, useRouter, Link } from "expo-router";
 
 import {
   Text,
-  DataTable,
+  // DataTable,
   Button,
   Portal,
   Modal,
@@ -41,16 +42,18 @@ export default function ParserModal() {
   const [rows, setRows] = useState([[""]]);
   const [parserDataRows, setParserDataRows] = useState([]); //ONLY EDITED WHEN DELETING COLUMN
   const [images, setImages] = useState([]); //ONLY EDITED WHEN DELETING LAST REMAINING COLUMN
-  const [page, setPage] = useState<number>(0);
-  const [numberOfItemsPerPageList] = useState([2, 3, 4]);
-  const [itemsPerPage, onItemsPerPageChange] = useState(4);
+  //const [page, setPage] = useState<number>(0);
+  // const [numberOfItemsPerPageList] = useState([2, 3, 4]);
+  // const [itemsPerPage, onItemsPerPageChange] = useState(4);
   const [isValidated, setIsValidated] = useState(false);
   const [modalText, setModalText] = useState("");
   const [isHintVisible, setIsHintVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const from = page * itemsPerPage;
-  const to = Math.min((page + 1) * itemsPerPage, rows.length);
+  
+
+  // const from = page * itemsPerPage;
+  // const to = Math.min((page + 1) * itemsPerPage, rows.length);
 
   const getAndSetParserTextFields = async () => {
     try {
@@ -189,24 +192,21 @@ export default function ParserModal() {
     setImages(updatedImages);
   };
 
-  useEffect(() => {
-    setPage(0);
-  }, [itemsPerPage]);
 
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      if (!isMounted) {
-        return;
-      }
+
+
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
       if (parserId) {
-        await getAndSetParserTextFields();
+        getAndSetParserTextFields();
       }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      return () => {
+        isActive = false;
+      };
+    }, []),
+  );
 
   return (
     <KeyboardAvoidingView
@@ -278,143 +278,146 @@ export default function ParserModal() {
           </Text>
         )}
       </View>
-      <View>
-        <ScrollView horizontal contentContainerStyle={styles.scrollView}>
-          <View style={styles.table}>
-            <View style={styles.row}>
-              {headers?.map((header, headerIndex) => (
-                <View key={headerIndex} style={[styles.cell, styles.header]}>       
-                  <Button
-                    mode="text"
-                    disabled={isLoading}
-                    onPress={() => {
-                      setModalHeaderIndex(headerIndex);
-                      setModalText(header);
-                    }}
-                    onLongPress={() => {
-                      setDialogColumnIndex(headerIndex);
-                    }}
-                    labelStyle={{
-                      textDecorationLine: "underline",
-                      color: !isValidated || header ? "blue" : "red",
-                    }}
-                  >
-                    {header
-                      ? header.length > 20
-                        ? header.substring(0, 20) + "..."
-                        : header
-                      : "Header name"}
-                  </Button>
-                  <Portal>
-                    <Modal
-                      visible={modalHeaderIndex === headerIndex}
-                      onDismiss={() => {
-                        setModalHeaderIndex(null);
-                        updateHeaderText(headerIndex, modalText);
-                      }}
-                      contentContainerStyle={styles.modal}
-                    >
-                      <TextInput
-                        label={"Header name"}
-                        value={modalText}
-                        onChangeText={(text) => {
-                          setModalText(text);
-                        }}
-                      />
-                    </Modal>
-                  </Portal>
-
-                  <Portal>
-                    <Dialog
-                      visible={dialogColumnIndex === headerIndex}
-                      onDismiss={() => {
-                        setDialogColumnIndex(null);
-                      }}
-                    >
-                      <Dialog.Content>
-                        <Text variant="bodyMedium" style={styles.dialog}>
-                          Ok to delete this column?
-                        </Text>
-                        <Text> </Text>
-                        <Text variant="bodySmall">
-                          This will also delete the same column of this
-                          parser's data table.
-                        </Text>
-                      </Dialog.Content>
-                      <Dialog.Actions>
-                        <Button
-                          onPress={() => {
-                            deleteColumn(headerIndex);
-                            setDialogColumnIndex(null);
-                          }}
-                        >
-                          OK
-                        </Button>
-                      </Dialog.Actions>
-                      <Dialog.Actions>
-                        <Button
-                          onPress={() => {
-                            setDialogColumnIndex(null);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </Dialog.Actions>
-                    </Dialog>
-                  </Portal>
-                </View>
-              ))}
-            </View>
-            {rows?.slice(from, to).map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.row}>
-                {row?.map((prompt, cellIndex) => (
-                  <View key={cellIndex} style={styles.cell}>
+      <View style={styles.scrollContainer}>
+        <ScrollView>
+          <ScrollView horizontal>
+            <View style={styles.table}>
+              <View style={styles.row}>
+                {headers?.map((header, headerIndex) => (
+                  <View key={headerIndex} style={[styles.cell, styles.header]}>
                     <Button
                       mode="text"
                       disabled={isLoading}
                       onPress={() => {
-                        setModalRowAndCellIndex({ rowIndex, cellIndex });
-                        setModalText(prompt);
+                        setModalHeaderIndex(headerIndex);
+                        setModalText(header);
+                      }}
+                      onLongPress={() => {
+                        setDialogColumnIndex(headerIndex);
                       }}
                       labelStyle={{
                         textDecorationLine: "underline",
-                        color: !isValidated || prompt ? "blue" : "red",
+                        color: !isValidated || header ? "blue" : "red",
                       }}
                     >
-                      {prompt
-                        ? prompt.length > 20
-                          ? prompt.substring(0, 20) + "..."
-                          : prompt
-                        : "Cell value prompt"}
+                      {header
+                        ? header.length > 20
+                          ? header.substring(0, 20) + "..."
+                          : header
+                        : "Header name"}
                     </Button>
                     <Portal>
                       <Modal
-                        visible={
-                          modalRowAndCellIndex !== null &&
-                          modalRowAndCellIndex.rowIndex === rowIndex &&
-                          modalRowAndCellIndex.cellIndex === cellIndex
-                        }
+                        visible={modalHeaderIndex === headerIndex}
                         onDismiss={() => {
-                          setModalRowAndCellIndex(null);
-                          updatePrompt(rowIndex, cellIndex, modalText);
+                          setModalHeaderIndex(null);
+                          updateHeaderText(headerIndex, modalText);
                         }}
                         contentContainerStyle={styles.modal}
                       >
                         <TextInput
-                          label={"Cell value prompt"}
+                          label={"Header name"}
                           value={modalText}
-                          onChangeText={(text) => setModalText(text)}
+                          onChangeText={(text) => {
+                            setModalText(text);
+                          }}
                         />
                       </Modal>
+                    </Portal>
+
+                    <Portal>
+                      <Dialog
+                        visible={dialogColumnIndex === headerIndex}
+                        onDismiss={() => {
+                          setDialogColumnIndex(null);
+                        }}
+                      >
+                        <Dialog.Content>
+                          <Text variant="bodyMedium" style={styles.dialog}>
+                            Ok to delete this column?
+                          </Text>
+                          <Text> </Text>
+                          <Text variant="bodySmall">
+                            This will also delete the same column of this
+                            parser's data table.
+                          </Text>
+                        </Dialog.Content>
+                        <Dialog.Actions>
+                          <Button
+                            onPress={() => {
+                              deleteColumn(headerIndex);
+                              setDialogColumnIndex(null);
+                            }}
+                          >
+                            OK
+                          </Button>
+                        </Dialog.Actions>
+                        <Dialog.Actions>
+                          <Button
+                            onPress={() => {
+                              setDialogColumnIndex(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </Dialog.Actions>
+                      </Dialog>
                     </Portal>
                   </View>
                 ))}
               </View>
-            ))}
-          </View>
+              {/* {rows?.slice(from, to).map((row, rowIndex) => ( */}
+              {rows?.map((row, rowIndex) => (
+                <View key={rowIndex} style={styles.row}>
+                  {row?.map((prompt, cellIndex) => (
+                    <View key={cellIndex} style={styles.cell}>
+                      <Button
+                        mode="text"
+                        disabled={isLoading}
+                        onPress={() => {
+                          setModalRowAndCellIndex({ rowIndex, cellIndex });
+                          setModalText(prompt);
+                        }}
+                        labelStyle={{
+                          textDecorationLine: "underline",
+                          color: !isValidated || prompt ? "blue" : "red",
+                        }}
+                      >
+                        {prompt
+                          ? prompt.length > 20
+                            ? prompt.substring(0, 20) + "..."
+                            : prompt
+                          : "Cell value prompt"}
+                      </Button>
+                      <Portal>
+                        <Modal
+                          visible={
+                            modalRowAndCellIndex !== null &&
+                            modalRowAndCellIndex.rowIndex === rowIndex &&
+                            modalRowAndCellIndex.cellIndex === cellIndex
+                          }
+                          onDismiss={() => {
+                            setModalRowAndCellIndex(null);
+                            updatePrompt(rowIndex, cellIndex, modalText);
+                          }}
+                          contentContainerStyle={styles.modal}
+                        >
+                          <TextInput
+                            label={"Cell value prompt"}
+                            value={modalText}
+                            onChangeText={(text) => setModalText(text)}
+                          />
+                        </Modal>
+                      </Portal>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
         </ScrollView>
 
-        <DataTable.Pagination
+        {/* <DataTable.Pagination
           style={styles.pagination}
           page={page}
           numberOfPages={Math.ceil(rows.length / itemsPerPage)}
@@ -425,7 +428,7 @@ export default function ParserModal() {
           onItemsPerPageChange={onItemsPerPageChange}
           showFastPaginationControls
           selectPageDropdownLabel={"Rows per page"}
-        />
+        /> */}
       </View>
       <View style={styles.saveButtonContainer}>
         <Button
@@ -491,11 +494,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  scrollView: {
-    flexGrow: 1,
+  scrollContainer: {
+    // flex: 1,
+    height: 200, // Set a fixed height for the scrollable area
     marginBottom: 10,
     paddingHorizontal: 16,
   },
+  // scrollView: {
+  //   flexGrow: 1,
+  //   marginBottom: 10,
+  //   paddingHorizontal: 16,
+  // },
   modal: {
     backgroundColor: "white",
     padding: 20,
@@ -521,17 +530,18 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   header: {
-    backgroundColor: "lightgrey"
+    backgroundColor: "lightgrey",
   },
-  pagination: {
-    backgroundColor: "white",
-    marginBottom: 20,
-    marginHorizontal: 16,
-  },
+  // pagination: {
+  //   backgroundColor: "white",
+  //   marginBottom: 20,
+  //   marginHorizontal: 16,
+  // },
   saveButtonContainer: {
     alignItems: "center",
   },
   saveButton: {
     width: "60%",
+    marginVertical: 10,
   },
 });
